@@ -359,18 +359,31 @@ fun SkmSplashScreen(onFinished: () -> Unit) {
             verticalArrangement = Arrangement.Center,
             modifier = Modifier.padding(24.dp)
         ) {
-            Image(
-                painter = painterResource(R.drawable.skm_logo_horizontal),
-                contentDescription = "SKM Industrial Ltda.",
-                contentScale = ContentScale.Fit,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 220.dp)
+            SkmLogoSymbol(
+                modifier = Modifier.size(200.dp),
+                rotationAngle = rotation,
+                gearRotationAngle = gearRotation
             )
             
             Spacer(modifier = Modifier.height(32.dp))
             
-            Spacer(modifier = Modifier.height(40.dp))
+            Text(
+                text = "SKM",
+                color = Color(0xFFEF8321),
+                fontSize = 44.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 2.sp
+            )
+
+            Text(
+                text = "INDUSTRIAL LTDA.",
+                color = Color(0xFF1E293B),
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 4.sp
+            )
+
+            Spacer(modifier = Modifier.height(48.dp))
             
             // Thin elegant orange progress bar
             CircularProgressIndicator(
