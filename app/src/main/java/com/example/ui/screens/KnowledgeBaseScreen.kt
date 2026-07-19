@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.BearingSpec
 import com.example.data.model.HousingSpec
 import com.example.ui.viewmodel.BearingViewModel
+import com.example.util.AssetPdfOpener
 
 @Composable
 fun KnowledgeBaseScreen(
@@ -755,6 +756,7 @@ fun textBrand(brand: String) {
 
 @Composable
 fun SkmPulleyManualScreen() {
+    val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
     var selectedSection by remember { mutableStateOf("Todo") }
     
@@ -805,6 +807,21 @@ fun SkmPulleyManualScreen() {
                     )
                 )
             }
+        }
+
+        OutlinedButton(
+            onClick = {
+                AssetPdfOpener.open(
+                    context,
+                    "manuales/manual_capacitacion_skm_poleas.pdf",
+                    "Manual_Capacitacion_SKM_Poleas.pdf"
+                )
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Default.PictureAsPdf, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("Abrir manual SKM completo · 182 páginas", fontWeight = FontWeight.Bold)
         }
         
         // Manual Content
@@ -996,7 +1013,7 @@ fun SkfBearingManualScreen() {
     var searchQuery by remember { mutableStateOf("") }
     var selectedSection by remember { mutableStateOf("Todo") }
     
-    val sections = listOf("Todo", "Conceptos", "Almacenamiento", "Montaje", "Lubricación", "Inspección")
+    val sections = listOf("Todo", "Rótula", "Tablas", "Conceptos", "Almacenamiento", "Montaje", "Lubricación", "Inspección")
     
     Column(
         modifier = Modifier
@@ -1052,6 +1069,59 @@ fun SkfBearingManualScreen() {
                 .fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            if ((selectedSection == "Todo" || selectedSection == "Rótula") &&
+                (searchQuery.isEmpty() || listOf("rótula", "esférico", "oscilante", "cack", "cck", "w33", "c3").any { it.contains(searchQuery, true) })) {
+                item {
+                    ManualSectionCard(
+                        title = "Rodamientos de rodillos a rótula SKF",
+                        subtitle = "Familias 222, 223, 230, 231, 232, 239, 240 y 241"
+                    ) {
+                        Text(
+                            "Son autoalineables: las dos hileras de rodillos y la pista esférica del aro exterior permiten compensar desalineación del eje respecto del soporte. Admiten cargas radiales muy elevadas y cargas axiales en ambos sentidos. En poleas transportadoras se privilegian por su robustez frente a flexión de eje, contaminación y cargas de impacto.",
+                            fontSize = 12.sp,
+                            lineHeight = 17.sp
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            SpecRow("E / EC / CC:", "Diseño interno optimizado; confirmar siempre la ficha exacta de la designación.")
+                            SpecRow("K:", "Agujero cónico 1:12 para montaje directo o con manguito.")
+                            SpecRow("K30:", "Agujero cónico 1:30, habitual en series 240 y 241.")
+                            SpecRow("W33:", "Ranura anular y tres orificios de lubricación en el aro exterior.")
+                            SpecRow("C3 / C4:", "Juego radial interno mayor que Normal; no equivale al juego residual final.")
+                            SpecRow("CACK/W33:", "Jaula mecanizada de latón, aro guía y agujero cónico; verificar variante vigente.")
+                            SpecRow("CCK/W33:", "Jaula de acero, agujero cónico y características W33; verificar variante vigente.")
+                        }
+                        Spacer(Modifier.height(10.dp))
+                        WarningCard(
+                            title = "La designación completa gobierna el montaje",
+                            text = "No use una tabla solo por compartir el número básico. El sufijo, el juego C3/C4, el diámetro, el cono 1:12 o 1:30 y el método de montaje cambian el criterio aplicable. Confirme catálogo SKF vigente, plano y certificado del rodamiento antes de liberar."
+                        )
+                    }
+                }
+            }
+
+            if ((selectedSection == "Todo" || selectedSection == "Tablas") &&
+                (searchQuery.isEmpty() || listOf("tabla", "juego", "reducción", "calado", "medición", "galga").any { it.contains(searchQuery, true) })) {
+                item {
+                    ManualSectionCard(
+                        title = "Tabla de control para calado en poleas",
+                        subtitle = "Secuencia de registro y criterio de aceptación"
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            SpecRow("1. Identificar:", "Designación completa, serie, sufijos, lote y lado fijo/móvil.")
+                            SpecRow("2. Juego inicial:", "Medir con galgas en zona descargada, entre rodillo y aro exterior.")
+                            SpecRow("3. Objetivo:", "Tomar reducción mínima/máxima de la tabla SKF específica.")
+                            SpecRow("4. Calado:", "Avanzar gradualmente; alternar medición axial y reducción de juego.")
+                            SpecRow("5. Juego residual:", "Juego inicial menos reducción real; nunca debe quedar negativo.")
+                            SpecRow("6. Evidencia:", "Registrar temperatura, instrumento, serie, calibración, operador y fotos.")
+                            SpecRow("7. Liberación:", "Validación cruzada por mecánico responsable y Calidad.")
+                        }
+                        Spacer(Modifier.height(10.dp))
+                        TechNoteCard("La app calcula y documenta; no sustituye la tabla SKF vigente ni el procedimiento aprobado por SKM/BHP. Si los métodos por reducción de juego y desplazamiento axial discrepan, detener el montaje y revisar asiento, manguito, cero del comparador y temperatura.")
+                    }
+                }
+            }
+
             // Section 1: Conceptos
             if ((selectedSection == "Todo" || selectedSection == "Conceptos") && 
                 (searchQuery.isEmpty() || "conceptos".contains(searchQuery, true) || "terminología".contains(searchQuery, true) || "juego".contains(searchQuery, true) || "sufijo".contains(searchQuery, true))) {
