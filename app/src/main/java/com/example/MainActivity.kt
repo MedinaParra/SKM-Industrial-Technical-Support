@@ -8,6 +8,7 @@ import androidx.activity.viewModels
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,6 +23,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -196,7 +199,12 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun SkmLogo(modifier: Modifier = Modifier) {
-    SkmLogoSymbol(modifier = modifier.size(40.dp))
+    Image(
+        painter = painterResource(R.drawable.skm_logo_symbol),
+        contentDescription = "Logo SKM Industrial",
+        contentScale = ContentScale.Fit,
+        modifier = modifier.size(40.dp)
+    )
 }
 
 @Composable
@@ -351,31 +359,18 @@ fun SkmSplashScreen(onFinished: () -> Unit) {
             verticalArrangement = Arrangement.Center,
             modifier = Modifier.padding(24.dp)
         ) {
-            SkmLogoSymbol(
-                modifier = Modifier.size(200.dp),
-                rotationAngle = rotation,
-                gearRotationAngle = gearRotation
+            Image(
+                painter = painterResource(R.drawable.skm_logo_horizontal),
+                contentDescription = "SKM Industrial Ltda.",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 220.dp)
             )
             
             Spacer(modifier = Modifier.height(32.dp))
             
-            Text(
-                text = "SKM",
-                color = Color(0xFFEF8321), // SKM Orange
-                fontSize = 44.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 2.sp
-            )
-            
-            Text(
-                text = "INDUSTRIAL LTDA.",
-                color = Color(0xFF1E293B), // Slate dark gray
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 4.sp
-            )
-            
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(40.dp))
             
             // Thin elegant orange progress bar
             CircularProgressIndicator(
@@ -396,4 +391,3 @@ fun SkmSplashScreen(onFinished: () -> Unit) {
         }
     }
 }
-

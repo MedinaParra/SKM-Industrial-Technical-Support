@@ -1,12 +1,8 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# SKM Industrial Técnica
 
-# Run and deploy your AI Studio app
+Aplicación Android offline para apoyo técnico en reparación, manufactura y armado de poleas transportadoras, con énfasis en rodamientos de rodillos a rótula SKF.
 
-This contains everything you need to run your app locally.
-
-View your app in AI Studio: https://ai.studio/apps/aa54861f-91d4-49d6-8c78-12b237f3aaf0
+Incluye catálogo de rodamientos y soportes, control de calado, calculadora de lubricación, reportes, guía SKF estructurada y el Manual de Capacitación SKM completo (182 páginas).
 
 ## Run Locally
 
@@ -15,7 +11,7 @@ View your app in AI Studio: https://ai.studio/apps/aa54861f-91d4-49d6-8c78-12b23
 
 1. Open Android Studio
 2. Select **Open** and choose the directory containing this project
-3. Allow Android Studio to fix any incompatibilities as it imports the project.
-4. Create a file named `.env` in the project directory and set `GEMINI_API_KEY` in that file to your Gemini API key (see `.env.example` for an example)
-5. Remove this line from the app's `build.gradle.kts` file: `signingConfig = signingConfigs.getByName("debugConfig")`
-6. Run the app on an emulator or physical device
+3. Espere la sincronización de Gradle.
+4. Ejecute la variante `debug` en un emulador o teléfono Android 7.0 o superior.
+
+> La información de montaje debe verificarse contra el catálogo SKF vigente, la designación completa del rodamiento, el plano y el procedimiento aprobado para la orden de trabajo.
