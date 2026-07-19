@@ -1,0 +1,6 @@
+{
+  "name": "SKM Rodamientos",
+  "description": "Base de conocimiento, cotas de soportes y calculadoras de montaje de rodamientos SKF, Timken, FAG, DODGE, NSK con reportes PDF y CAD 3D para técnicos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
