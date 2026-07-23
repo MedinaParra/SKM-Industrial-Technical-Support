@@ -1,4 +1,4 @@
-name: Package OCCT runtime
+name: Package Web 3D runtime
 
 on:
   workflow_dispatch:
@@ -27,25 +27,21 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Download OpenCascade JavaScript runtime
+      - name: Download Three.js browser runtime
         run: |
           mkdir -p runtime
-          cd runtime
-          npm pack occt-import-js@0.0.23
-          tar -xzf occt-import-js-0.0.23.tgz
-          cp package/dist/occt-import-js.js .
-          cp package/dist/occt-import-js.wasm .
-          printf '{"name":"occt-runtime","version":"0.0.23","type":"commonjs"}\n' > package.json
-          ls -lh occt-import-js.js occt-import-js.wasm package.json
+          npm install --prefix runtime three@0.138.3
+          cp runtime/node_modules/three/build/three.min.js runtime/
+          cp runtime/node_modules/three/examples/js/loaders/GLTFLoader.js runtime/
+          ls -lh runtime/three.min.js runtime/GLTFLoader.js
 
-      - name: Upload OpenCascade runtime
+      - name: Upload browser runtime
         uses: actions/upload-artifact@v4
         with:
-          name: OCCT-IMPORT-JS-RUNTIME
+          name: THREEJS-OT1676-RUNTIME
           path: |
-            runtime/occt-import-js.js
-            runtime/occt-import-js.wasm
-            runtime/package.json
+            runtime/three.min.js
+            runtime/GLTFLoader.js
           if-no-files-found: error
           compression-level: 9
           retention-days: 3
