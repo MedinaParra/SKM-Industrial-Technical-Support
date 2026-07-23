@@ -6,6 +6,11 @@ on:
     paths:
       - '.github/workflows/convert-ot1676-step.yml'
       - 'tools/ot1676-step-to-glb.js'
+  pull_request:
+    paths:
+      - 'conversion/ot1676-trigger.txt'
+      - 'tools/ot1676-step-to-glb.js'
+      - '.github/workflows/convert-ot1676-step.yml'
 
 permissions:
   contents: read
@@ -29,8 +34,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: npm
-          cache-dependency-path: package-lock.json
 
       - name: Download temporary STEP from Google Drive
         shell: bash
