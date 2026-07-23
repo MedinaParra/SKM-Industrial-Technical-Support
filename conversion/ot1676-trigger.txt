@@ -1,1 +1,1 @@
-Temporary trigger for converting ARMADO OT-1676.STEP to an optimized web GLB.
+Trigger OCCT runtime packaging for private local conversion of ARMADO OT-1676.STEP.
