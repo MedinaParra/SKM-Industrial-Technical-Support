@@ -1,1 +1,1 @@
-Trigger OCCT runtime packaging for private local conversion of ARMADO OT-1676.STEP.
+Trigger Three.js runtime packaging for the self-contained OT-1676 web viewer.
