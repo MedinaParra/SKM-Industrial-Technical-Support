@@ -1,30 +1,22 @@
-name: Convert OT-1676 STEP to GLB
+name: Package OCCT runtime
 
 on:
   workflow_dispatch:
   push:
     paths:
       - '.github/workflows/convert-ot1676-step.yml'
-      - 'tools/ot1676-step-to-glb.js'
   pull_request:
     paths:
       - 'conversion/ot1676-trigger.txt'
-      - 'tools/ot1676-step-to-glb.js'
       - '.github/workflows/convert-ot1676-step.yml'
 
 permissions:
   contents: read
 
-env:
-  DRIVE_FILE_ID: 1Eyk88pXTfY7pAS-iqv9TcaxQjwLS2tGh
-  STEP_FILE: ARMADO_OT1676.STEP
-  GLB_FILE: ARMADO_OT1676_WEB.glb
-  MANIFEST_FILE: ARMADO_OT1676_WEB_manifest.json
-
 jobs:
-  convert:
+  package-runtime:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
 
     steps:
       - name: Checkout repository
@@ -35,46 +27,25 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Download temporary STEP from Google Drive
-        shell: bash
+      - name: Download OpenCascade JavaScript runtime
         run: |
-          python -m pip install --quiet gdown
-          gdown "https://drive.google.com/uc?id=${DRIVE_FILE_ID}" -O "${STEP_FILE}" || true
-          if ! grep -aq 'ISO-10303-21' "${STEP_FILE}" 2>/dev/null; then
-            rm -f "${STEP_FILE}"
-            curl --fail --location --retry 3 \
-              "https://drive.usercontent.google.com/download?id=${DRIVE_FILE_ID}&export=download&confirm=t" \
-              --output "${STEP_FILE}"
-          fi
-          grep -aq 'ISO-10303-21' "${STEP_FILE}"
-          ls -lh "${STEP_FILE}"
+          mkdir -p runtime
+          cd runtime
+          npm pack occt-import-js@0.0.23
+          tar -xzf occt-import-js-0.0.23.tgz
+          cp package/dist/occt-import-js.js .
+          cp package/dist/occt-import-js.wasm .
+          printf '{"name":"occt-runtime","version":"0.0.23","type":"commonjs"}\n' > package.json
+          ls -lh occt-import-js.js occt-import-js.wasm package.json
 
-      - name: Install OpenCascade converter
-        run: npm install --no-save occt-import-js@0.0.23
-
-      - name: Convert STEP to GLB
-        env:
-          LINEAR_DEFLECTION: '0.85'
-          ANGULAR_DEFLECTION: '0.28'
-        run: node tools/ot1676-step-to-glb.js "${STEP_FILE}" "${GLB_FILE}" "${MANIFEST_FILE}"
-
-      - name: Show conversion summary
-        run: |
-          ls -lh "${GLB_FILE}" "${MANIFEST_FILE}"
-          python - <<'PY'
-          import json
-          data = json.load(open('ARMADO_OT1676_WEB_manifest.json'))
-          print(json.dumps(data['totals'], indent=2))
-          print(json.dumps(data['output'], indent=2))
-          PY
-
-      - name: Upload converted model
+      - name: Upload OpenCascade runtime
         uses: actions/upload-artifact@v4
         with:
-          name: OT1676-GLB-WEB
+          name: OCCT-IMPORT-JS-RUNTIME
           path: |
-            ARMADO_OT1676_WEB.glb
-            ARMADO_OT1676_WEB_manifest.json
+            runtime/occt-import-js.js
+            runtime/occt-import-js.wasm
+            runtime/package.json
           if-no-files-found: error
           compression-level: 9
           retention-days: 3
