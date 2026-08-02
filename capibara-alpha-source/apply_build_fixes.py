@@ -14,6 +14,9 @@ preset = root / "export_presets.cfg"
 text = preset.read_text(encoding="utf-8")
 text = text.replace('gradle_build/min_sdk="24"\n', "")
 text = text.replace('gradle_build/target_sdk="35"\n', "")
+text = text.replace('architectures/armeabi-v7a=false', 'architectures/armeabi-v7a=true')
+text = text.replace('version/code=1', 'version/code=2')
+text = text.replace('version/name="0.1.0-alpha"', 'version/name="0.1.1-alpha"')
 preset.write_text(text, encoding="utf-8")
 
 project = root / "project.godot"
