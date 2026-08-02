@@ -43,7 +43,15 @@ jobs:
       - name: Install Android SDK packages
         run: |
           yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.1" "cmdline-tools;latest"
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.1"
+
+      - name: Install Blender runtime libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libegl1 libgl1 libgl1-mesa-dri libglx-mesa0 \
+            libx11-6 libxext6 libxi6 libxrender1 libxfixes3 \
+            libxxf86vm1 libxkbcommon0 xvfb
 
       - name: Download Blender Portable 4.5 LTS
         run: |
@@ -56,9 +64,11 @@ jobs:
           blender-portable/blender --version
 
       - name: Create capybara model, textures and GLB
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
         run: |
           mkdir -p build-output
-          blender-portable/blender -b \
+          xvfb-run -a blender-portable/blender -b \
             --python CapibaraAlpha/tools/create_capybara.py \
             -- "$PWD/build-output" "$PWD/CapibaraAlpha"
           test -s CapibaraAlpha/assets/capibara_alpha.glb
