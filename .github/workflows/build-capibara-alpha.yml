@@ -128,15 +128,16 @@ jobs:
 
       - name: Export Android APK
         run: |
-          mkdir -p CapibaraAlpha/output
+          APK_PATH="$PWD/CapibaraAlpha/output/Capibara-Alpha-0.1.apk"
+          mkdir -p "$(dirname "$APK_PATH")"
           "$GODOT" --headless --path CapibaraAlpha \
             --export-debug "Android" \
-            CapibaraAlpha/output/Capibara-Alpha-0.1.apk
-          test -s CapibaraAlpha/output/Capibara-Alpha-0.1.apk
-          unzip -t CapibaraAlpha/output/Capibara-Alpha-0.1.apk
+            "$APK_PATH"
+          test -s "$APK_PATH"
+          unzip -t "$APK_PATH"
           "$ANDROID_HOME/build-tools/35.0.1/apksigner" verify \
             --verbose --print-certs \
-            CapibaraAlpha/output/Capibara-Alpha-0.1.apk \
+            "$APK_PATH" \
             > build-output/Capibara-Alpha-0.1-signature.txt
 
       - name: Package deliverables
