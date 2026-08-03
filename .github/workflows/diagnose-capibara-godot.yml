@@ -8,6 +8,12 @@ on:
     paths:
       - ".github/workflows/diagnose-capibara-godot.yml"
       - "capibara-alpha-source/patch_godot_beta.py"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/diagnose-capibara-godot.yml"
+      - "capibara-alpha-source/patch_godot_beta.py"
 
 permissions:
   contents: read
@@ -48,7 +54,7 @@ jobs:
           set -o pipefail
           "$GODOT" --headless --editor --path CapibaraAlpha --quit-after 35 2>&1 | tee godot-import.log
 
-      - name: Print diagnostic tail
+      - name: Print diagnostic
         if: always()
         run: |
           echo "===== GODOT LOG ====="
