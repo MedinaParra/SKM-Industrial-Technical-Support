@@ -1,0 +1,52 @@
+name: Preview Capibara V4 Clean Surface
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/preview-capibara-v4.yml"
+      - "capibara-alpha-source/create_capybara_v4_clean_surface.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/capibara-alpha-godot
+
+      - name: Validate V4 source
+        run: |
+          python -m py_compile capibara-alpha-source/create_capybara_v4_clean_surface.py
+          mkdir -p preview-output
+
+      - name: Install Blender Portable
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libegl1 libgl1 libgl1-mesa-dri libglx-mesa0 libx11-6 libxext6 libxi6 libxrender1 libxfixes3 libxxf86vm1 libxkbcommon0 xvfb
+          curl -fL --retry 5 --retry-delay 3 "https://cdn.builder.blender.org/download/daily/archive/blender-4.5.11-stable%2Bv45.4db51e9d1e1e-linux.x86_64-release.tar.xz" -o blender.tar.xz
+          mkdir blender-portable
+          tar -xf blender.tar.xz -C blender-portable --strip-components=1
+          chmod +x blender-portable/blender
+
+      - name: Render V4 in Blender
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          xvfb-run -a blender-portable/blender -b --python capibara-alpha-source/create_capybara_v4_clean_surface.py -- "$PWD/preview-output"
+          test -s preview-output/capibara_v4_clean_surface.blend
+          test -s preview-output/capibara_v4_front.png
+          test -s preview-output/capibara_v4_profile.png
+          test -s preview-output/capibara_v4_three_quarter.png
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Capibara-V4-Clean-Surface-Real-Blender
+          path: preview-output/
+          if-no-files-found: error
+          retention-days: 14
