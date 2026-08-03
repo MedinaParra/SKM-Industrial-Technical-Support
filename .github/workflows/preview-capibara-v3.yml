@@ -10,7 +10,7 @@ on:
       - "capibara-alpha-source/create_capybara_v3.py.gz.b64"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   preview:
@@ -18,6 +18,8 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: agent/capibara-alpha-godot
 
       - name: Restore V3 generator
         run: |
@@ -60,6 +62,18 @@ jobs:
           test -s preview-output/capibara_beta_front.png
           test -s preview-output/capibara_beta_profile.png
           test -s preview-output/capibara_beta_three_quarter.png
+
+      - name: Save real previews in branch
+        run: |
+          mkdir -p capibara-alpha-source/v3-previews
+          cp preview-output/capibara_beta_front.png capibara-alpha-source/v3-previews/capibara_v3_front.png
+          cp preview-output/capibara_beta_profile.png capibara-alpha-source/v3-previews/capibara_v3_profile.png
+          cp preview-output/capibara_beta_three_quarter.png capibara-alpha-source/v3-previews/capibara_v3_three_quarter.png
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add capibara-alpha-source/v3-previews
+          git diff --cached --quiet || git commit -m "art: update Capibara V3 real Blender previews"
+          git push origin HEAD:agent/capibara-alpha-godot
 
       - name: Upload art preview
         uses: actions/upload-artifact@v4
