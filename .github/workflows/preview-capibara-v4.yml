@@ -11,6 +11,7 @@ on:
       - "capibara-alpha-source/apply_v4_3_face_body_fur_refine.py"
       - "capibara-alpha-source/apply_v5_sculpt_master.py"
       - "capibara-alpha-source/apply_v6_reference_match.py"
+      - "capibara-alpha-source/restore_v6_geometry_helpers.py"
   workflow_dispatch:
 
 permissions:
@@ -32,7 +33,9 @@ jobs:
           python capibara-alpha-source/apply_v4_2_target_proportions_fur.py /tmp/create_capybara_v6.py
           python capibara-alpha-source/apply_v4_3_face_body_fur_refine.py /tmp/create_capybara_v6.py
           python capibara-alpha-source/apply_v5_sculpt_master.py /tmp/create_capybara_v6.py
+          cp /tmp/create_capybara_v6.py /tmp/create_capybara_v5_helpers.py
           python capibara-alpha-source/apply_v6_reference_match.py /tmp/create_capybara_v6.py
+          python capibara-alpha-source/restore_v6_geometry_helpers.py /tmp/create_capybara_v6.py /tmp/create_capybara_v5_helpers.py
           python - <<'PY'
           from pathlib import Path
           p = Path('/tmp/create_capybara_v6.py')
