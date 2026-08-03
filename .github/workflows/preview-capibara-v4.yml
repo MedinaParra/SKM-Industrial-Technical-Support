@@ -1,4 +1,4 @@
-name: Preview Capibara V4.2 Target Fur
+name: Preview Capibara V4.3 Refine
 
 on:
   pull_request:
@@ -8,6 +8,7 @@ on:
       - "capibara-alpha-source/create_capybara_v4_clean_surface.py"
       - "capibara-alpha-source/apply_v4_1_capybara_identity.py"
       - "capibara-alpha-source/apply_v4_2_target_proportions_fur.py"
+      - "capibara-alpha-source/apply_v4_3_face_body_fur_refine.py"
   workflow_dispatch:
 
 permissions:
@@ -22,11 +23,12 @@ jobs:
         with:
           ref: agent/capibara-alpha-godot
 
-      - name: Prepare and validate V4.2 source
+      - name: Prepare and validate V4.3 source
         run: |
           cp capibara-alpha-source/create_capybara_v4_clean_surface.py /tmp/create_capybara_v4.py
           python capibara-alpha-source/apply_v4_1_capybara_identity.py /tmp/create_capybara_v4.py
           python capibara-alpha-source/apply_v4_2_target_proportions_fur.py /tmp/create_capybara_v4.py
+          python capibara-alpha-source/apply_v4_3_face_body_fur_refine.py /tmp/create_capybara_v4.py
           python - <<'PY'
           from pathlib import Path
           p = Path('/tmp/create_capybara_v4.py')
@@ -49,7 +51,7 @@ jobs:
           tar -xf blender.tar.xz -C blender-portable --strip-components=1
           chmod +x blender-portable/blender
 
-      - name: Render V4.2 in Blender
+      - name: Render V4.3 in Blender
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"
         run: |
@@ -61,7 +63,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Capibara-V4.2-Target-Fur-Real-Blender
+          name: Capibara-V4.3-Refine-Real-Blender
           path: preview-output/
           if-no-files-found: error
           retention-days: 14
