@@ -21,53 +21,43 @@ jobs:
         with:
           ref: agent/capibara-alpha-godot
 
-      - name: Build compressed contact sheet
+      - name: Build inspectable miniature previews
         run: |
           python -m pip install --quiet pillow
           python - <<'PY'
           from pathlib import Path
-          from PIL import Image, ImageDraw
+          from PIL import Image
           import base64, shutil
 
           root = Path('capibara-alpha-source/v3-previews')
-          paths = [
-              root / 'capibara_v3_front.png',
-              root / 'capibara_v3_profile.png',
-              root / 'capibara_v3_three_quarter.png',
-          ]
-          labels = ['FRONTAL', 'PERFIL', 'TRES CUARTOS']
-          panels = []
-          for path, label in zip(paths, labels):
-              img = Image.open(path).convert('RGB')
-              img.thumbnail((300, 300), Image.Resampling.LANCZOS)
-              canvas = Image.new('RGB', (300, 326), (238, 236, 228))
-              canvas.paste(img, ((300 - img.width) // 2, 0))
-              ImageDraw.Draw(canvas).text((10, 306), label, fill=(25, 25, 25))
-              panels.append(canvas)
-          sheet = Image.new('RGB', (900, 326), (238, 236, 228))
-          for i, panel in enumerate(panels):
-              sheet.paste(panel, (i * 300, 0))
+          inputs = {
+              'front': root / 'capibara_v3_front.png',
+              'profile': root / 'capibara_v3_profile.png',
+              'three_quarter': root / 'capibara_v3_three_quarter.png',
+          }
           out_dir = Path('capibara-alpha-source/v3-preview-export')
           if out_dir.exists():
               shutil.rmtree(out_dir)
           out_dir.mkdir(parents=True)
-          jpg = out_dir / 'capibara_v3_contact_sheet.jpg'
-          sheet.save(jpg, quality=68, optimize=True, progressive=False)
-          encoded = base64.b64encode(jpg.read_bytes()).decode('ascii')
-          chunk = 2000
-          for i in range(0, len(encoded), chunk):
-              (out_dir / f'part_{i // chunk:03d}.b64').write_text(encoded[i:i+chunk], encoding='ascii')
-          (out_dir / 'manifest.txt').write_text(
-              f'encoding=base64\nfilename=capibara_v3_contact_sheet.jpg\nchars={len(encoded)}\nparts={(len(encoded)+chunk-1)//chunk}\n',
-              encoding='utf-8'
-          )
-          print('CONTACT_SHEET_BASE64_PARTS', (len(encoded)+chunk-1)//chunk)
+          manifest = []
+          for name, path in inputs.items():
+              img = Image.open(path).convert('RGB')
+              img.thumbnail((144, 144), Image.Resampling.LANCZOS)
+              canvas = Image.new('RGB', (144, 144), (238, 236, 228))
+              canvas.paste(img, ((144 - img.width) // 2, (144 - img.height) // 2))
+              jpg = out_dir / f'capibara_v3_{name}_small.jpg'
+              canvas.save(jpg, quality=42, optimize=True, progressive=False)
+              encoded = base64.b64encode(jpg.read_bytes()).decode('ascii')
+              (out_dir / f'{name}_small.b64').write_text(encoded, encoding='ascii')
+              manifest.append(f'{name}: chars={len(encoded)}')
+          (out_dir / 'manifest.txt').write_text('\n'.join(manifest) + '\n', encoding='utf-8')
+          print('\n'.join(manifest))
           PY
 
-      - name: Commit contact sheet chunks
+      - name: Commit miniature previews
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A capibara-alpha-source/v3-preview-export
-          git diff --cached --quiet || git commit -m "art: republish Capibara V3 preview in inspectable chunks"
+          git diff --cached --quiet || git commit -m "art: publish inspectable Capibara V3 real previews"
           git push origin HEAD:agent/capibara-alpha-godot
