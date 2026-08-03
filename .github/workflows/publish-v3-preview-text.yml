@@ -1,0 +1,75 @@
+name: Publish V3 Preview Contact Sheet
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/capibara-alpha-godot
+    paths:
+      - ".github/workflows/publish-v3-preview-text.yml"
+      - "capibara-alpha-source/v3-previews/**"
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/capibara-alpha-godot
+
+      - name: Build compressed contact sheet
+        run: |
+          python -m pip install --quiet pillow
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image, ImageOps, ImageDraw
+          import base64, shutil
+
+          root = Path('capibara-alpha-source/v3-previews')
+          paths = [
+              root / 'capibara_v3_front.png',
+              root / 'capibara_v3_profile.png',
+              root / 'capibara_v3_three_quarter.png',
+          ]
+          labels = ['FRONTAL', 'PERFIL', 'TRES CUARTOS']
+          panels = []
+          for path, label in zip(paths, labels):
+              img = Image.open(path).convert('RGB')
+              img.thumbnail((320, 320), Image.Resampling.LANCZOS)
+              canvas = Image.new('RGB', (320, 350), (238, 236, 228))
+              x = (320 - img.width) // 2
+              canvas.paste(img, (x, 0))
+              draw = ImageDraw.Draw(canvas)
+              draw.text((12, 326), label, fill=(25, 25, 25))
+              panels.append(canvas)
+          sheet = Image.new('RGB', (960, 350), (238, 236, 228))
+          for i, panel in enumerate(panels):
+              sheet.paste(panel, (i * 320, 0))
+          out_dir = Path('capibara-alpha-source/v3-preview-export')
+          if out_dir.exists():
+              shutil.rmtree(out_dir)
+          out_dir.mkdir(parents=True)
+          jpg = out_dir / 'capibara_v3_contact_sheet.jpg'
+          sheet.save(jpg, quality=78, optimize=True, progressive=True)
+          encoded = base64.b64encode(jpg.read_bytes()).decode('ascii')
+          chunk = 12000
+          for i in range(0, len(encoded), chunk):
+              (out_dir / f'part_{i // chunk:03d}.b64').write_text(encoded[i:i+chunk], encoding='ascii')
+          (out_dir / 'manifest.txt').write_text(
+              f'encoding=base64\nfilename=capibara_v3_contact_sheet.jpg\nchars={len(encoded)}\nparts={(len(encoded)+chunk-1)//chunk}\n',
+              encoding='utf-8'
+          )
+          print('CONTACT_SHEET_BASE64_PARTS', (len(encoded)+chunk-1)//chunk)
+          PY
+
+      - name: Commit contact sheet chunks
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add capibara-alpha-source/v3-preview-export
+          git diff --cached --quiet || git commit -m "art: publish Capibara V3 preview contact sheet"
+          git push origin HEAD:agent/capibara-alpha-godot
