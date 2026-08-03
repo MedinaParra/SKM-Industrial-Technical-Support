@@ -1,0 +1,74 @@
+name: Diagnose Capibara Godot
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/capibara-alpha-godot
+    paths:
+      - ".github/workflows/diagnose-capibara-godot.yml"
+      - "capibara-alpha-source/patch_godot_beta.py"
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore project
+        run: |
+          cat capibara-alpha-source/part_*.b64 | base64 --decode > CapibaraAlpha-source.tar.gz
+          tar -xzf CapibaraAlpha-source.tar.gz
+          python capibara-alpha-source/apply_build_fixes.py
+          python capibara-alpha-source/apply_all_iterations.py
+          python capibara-alpha-source/fix_beta_export.py
+          if [ -f capibara-alpha-source/patch_godot_beta.py ]; then
+            python capibara-alpha-source/patch_godot_beta.py
+          fi
+          python -m py_compile CapibaraAlpha/tools/create_capybara.py
+
+      - name: Download Godot
+        run: |
+          curl -fL --retry 5 --retry-delay 3 \
+            "https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip" \
+            -o godot.zip
+          unzip -q godot.zip -d godot-bin
+          GODOT_BIN="$(find godot-bin -maxdepth 1 -type f -name 'Godot*' | head -n 1)"
+          chmod +x "$GODOT_BIN"
+          echo "GODOT=$PWD/$GODOT_BIN" >> "$GITHUB_ENV"
+
+      - name: Run Godot import diagnostic
+        id: godot
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          "$GODOT" --headless --editor --path CapibaraAlpha --quit-after 35 2>&1 | tee godot-import.log
+
+      - name: Print diagnostic tail
+        if: always()
+        run: |
+          echo "===== GODOT LOG ====="
+          cat godot-import.log || true
+          echo "===== SCRIPT ====="
+          nl -ba CapibaraAlpha/main.gd | sed -n '1,360p'
+
+      - name: Upload diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Capibara-Godot-Diagnostic
+          path: |
+            godot-import.log
+            CapibaraAlpha/main.gd
+            CapibaraAlpha/project.godot
+            CapibaraAlpha/shaders/fur_mobile.gdshader
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Fail when Godot failed
+        if: steps.godot.outcome != 'success'
+        run: exit 1
