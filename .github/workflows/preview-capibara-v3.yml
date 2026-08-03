@@ -27,7 +27,8 @@ jobs:
           from pathlib import Path
           p = Path('CapibaraPreview/tools/create_capybara.py')
           s = p.read_text(encoding='utf-8')
-          s = s.replace('res=(1024, 1024)', 'res=(640, 640)')
+          s = s.replace('scene.render.engine = "BLENDER_EEVEE_NEXT"', 'scene.render.engine = "BLENDER_WORKBENCH"\nscene.display.shading.light = "STUDIO"\nscene.display.shading.color_type = "MATERIAL"\nscene.display.shading.show_shadows = True\nscene.display.shading.show_cavity = True\nscene.display.shading.cavity_type = "WORLD"')
+          s = s.replace('res=(1024, 1024)', 'res=(512, 512)')
           marker = 'render_view("capibara_beta_three_quarter.png", (5.7, -8.0, 3.48), (0, -0.05, 2.22), 61, "big_smile")'
           s = s.replace(marker, marker + '\nprint("CAPIBARA_V3_FAST_PREVIEW_OK")\nraise SystemExit(0)')
           p.write_text(s, encoding='utf-8')
