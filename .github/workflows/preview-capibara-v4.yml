@@ -1,4 +1,4 @@
-name: Preview Capibara V15 Capybara Skull
+name: Preview Capibara V16 Head Assembly
 
 on:
   pull_request:
@@ -8,6 +8,7 @@ on:
       - "capibara-alpha-source/create_capybara_v13_character_rebuild.py"
       - "capibara-alpha-source/apply_v14_fused_head_sculpt.py"
       - "capibara-alpha-source/apply_v15_capybara_skull.py"
+      - "capibara-alpha-source/apply_v16_head_assembly_correction.py"
   workflow_dispatch:
 
 permissions:
@@ -22,12 +23,13 @@ jobs:
         with:
           ref: agent/capibara-alpha-godot
 
-      - name: Prepare V15 source
+      - name: Prepare V16 source
         run: |
-          cp capibara-alpha-source/create_capybara_v13_character_rebuild.py /tmp/create_capybara_v15.py
-          python capibara-alpha-source/apply_v14_fused_head_sculpt.py /tmp/create_capybara_v15.py
-          python capibara-alpha-source/apply_v15_capybara_skull.py /tmp/create_capybara_v15.py
-          python -m py_compile /tmp/create_capybara_v15.py
+          cp capibara-alpha-source/create_capybara_v13_character_rebuild.py /tmp/create_capybara_v16.py
+          python capibara-alpha-source/apply_v14_fused_head_sculpt.py /tmp/create_capybara_v16.py
+          python capibara-alpha-source/apply_v15_capybara_skull.py /tmp/create_capybara_v16.py
+          python capibara-alpha-source/apply_v16_head_assembly_correction.py /tmp/create_capybara_v16.py
+          python -m py_compile /tmp/create_capybara_v16.py
           mkdir -p preview-output
 
       - name: Install Blender Portable
@@ -39,11 +41,11 @@ jobs:
           tar -xf blender.tar.xz -C blender-portable --strip-components=1
           chmod +x blender-portable/blender
 
-      - name: Render V15 capybara skull in Blender
+      - name: Render V16 head assembly in Blender
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"
         run: |
-          xvfb-run -a blender-portable/blender -b --python /tmp/create_capybara_v15.py -- "$PWD/preview-output"
+          xvfb-run -a blender-portable/blender -b --python /tmp/create_capybara_v16.py -- "$PWD/preview-output"
           test -s preview-output/capibara_v13_character_rebuild.blend
           test -s preview-output/capibara_v13_front.png
           test -s preview-output/capibara_v13_profile.png
@@ -51,7 +53,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Capibara-V15-Capybara-Skull-Real-Blender
+          name: Capibara-V16-Head-Assembly-Real-Blender
           path: preview-output/
           if-no-files-found: error
           retention-days: 14
