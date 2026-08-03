@@ -9,6 +9,13 @@ on:
       - ".github/workflows/preview-capibara-v3.yml"
       - "capibara-alpha-source/create_capybara_v3.py"
       - "capibara-alpha-source/apply_v3_1_cute_patch.py"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/preview-capibara-v3.yml"
+      - "capibara-alpha-source/create_capybara_v3.py"
+      - "capibara-alpha-source/apply_v3_1_cute_patch.py"
 
 permissions:
   contents: write
@@ -68,6 +75,7 @@ jobs:
           test -s preview-output/capibara_beta_three_quarter.png
 
       - name: Save V3.1 real previews in branch
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: |
           mkdir -p capibara-alpha-source/v3-previews
           cp preview-output/capibara_beta_front.png capibara-alpha-source/v3-previews/capibara_v3_front.png
