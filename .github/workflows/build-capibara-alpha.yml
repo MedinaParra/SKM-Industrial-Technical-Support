@@ -1,4 +1,4 @@
-name: Build Capibara Beta 1.0
+name: Build Capibara V3 Art Rebuild
 
 on:
   workflow_dispatch:
@@ -10,6 +10,7 @@ on:
       - "capibara-alpha-source/production_overlay_archive/**"
       - "capibara-alpha-source/apply_all_iterations.py"
       - "capibara-alpha-source/fix_beta_export.py"
+      - "capibara-alpha-source/create_capybara_v3.py.gz.b64"
       - ".github/workflows/build-capibara-alpha.yml"
   pull_request:
     branches:
@@ -27,13 +28,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Restore source project and apply 12 iterations
+      - name: Restore project and install V3 art rebuild generator
         run: |
           cat capibara-alpha-source/part_*.b64 | base64 --decode > CapibaraAlpha-source.tar.gz
           tar -xzf CapibaraAlpha-source.tar.gz
           python capibara-alpha-source/apply_build_fixes.py
           python capibara-alpha-source/apply_all_iterations.py
           python capibara-alpha-source/fix_beta_export.py
+          base64 --decode capibara-alpha-source/create_capybara_v3.py.gz.b64 | gzip -d > CapibaraAlpha/tools/create_capybara.py
           test -f CapibaraAlpha/project.godot
           test -f CapibaraAlpha/tools/create_capybara.py
           test -f CapibaraAlpha/tools/export_capybara_glb.py
@@ -72,7 +74,7 @@ jobs:
           chmod +x blender-portable/blender
           blender-portable/blender --version
 
-      - name: Execute 12 Blender iterations and real verification renders
+      - name: Build V3 model and real Blender verification renders
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"
         run: |
@@ -89,11 +91,14 @@ jobs:
           test -s build-output/capibara_beta_expression_surprise.png
           test -s build-output/capibara_beta_expression_curious.png
           test -s build-output/capibara_beta_expression_sleepy.png
+          test -s build-output/capibara_v3_clay_front.png
+          test -s build-output/capibara_v3_clay_profile.png
+          test -s build-output/capibara_v3_clay_three_quarter.png
           test -s build-output/capibara_beta_validation.json
           test -s build-output/ITERATIONS_COMPLETED.txt
           test -s CapibaraAlpha/icon.png
 
-      - name: Export LOD0 GLB in isolated Blender process
+      - name: Export LOD0 GLB
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"
         run: |
@@ -102,7 +107,7 @@ jobs:
             -- "$PWD/CapibaraAlpha/assets/capibara_beta_lod0.glb" 1.0
           test -s CapibaraAlpha/assets/capibara_beta_lod0.glb
 
-      - name: Export LOD1 GLB in isolated Blender process
+      - name: Export LOD1 GLB
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"
         run: |
@@ -111,7 +116,7 @@ jobs:
             -- "$PWD/CapibaraAlpha/assets/capibara_beta_lod1.glb" 0.58
           test -s CapibaraAlpha/assets/capibara_beta_lod1.glb
 
-      - name: Export LOD2 GLB in isolated Blender process
+      - name: Export LOD2 GLB
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"
         run: |
@@ -121,7 +126,7 @@ jobs:
           test -s CapibaraAlpha/assets/capibara_beta_lod2.glb
           cp CapibaraAlpha/assets/capibara_beta_lod0.glb CapibaraAlpha/assets/capibara_alpha.glb
 
-      - name: Download Godot 4.7.1 and Android export templates
+      - name: Download Godot 4.7.1 and Android templates
         run: |
           curl -fL --retry 5 --retry-delay 3 \
             "https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip" \
@@ -156,7 +161,7 @@ jobs:
               -storepass android \
               -alias androiddebugkey \
               -keypass android \
-              -dname "CN=Android Debug,O=Capibara Beta,C=CL" \
+              -dname "CN=Android Debug,O=Capibara V3,C=CL" \
               -keyalg RSA -keysize 2048 -validity 10000
           fi
 
@@ -172,7 +177,7 @@ jobs:
 
       - name: Export Android APK for 32 and 64 bit ARM
         run: |
-          APK_PATH="$PWD/CapibaraAlpha/output/Capibara-Beta-1.0.apk"
+          APK_PATH="$PWD/CapibaraAlpha/output/Capibara-V3-Art-Rebuild.apk"
           mkdir -p "$(dirname "$APK_PATH")"
           "$GODOT" --headless --path CapibaraAlpha \
             --export-debug "Android" \
@@ -183,30 +188,29 @@ jobs:
           unzip -l "$APK_PATH" | grep "lib/arm64-v8a/"
           "$ANDROID_HOME/build-tools/35.0.1/apksigner" verify \
             --verbose --print-certs "$APK_PATH" \
-            > build-output/Capibara-Beta-1.0-signature.txt
+            > build-output/Capibara-V3-Art-Rebuild-signature.txt
 
-      - name: Package final Beta
+      - name: Package V3 art review
         run: |
-          cp CapibaraAlpha/output/Capibara-Beta-1.0.apk build-output/
-          cp CapibaraAlpha/assets/capibara_beta_lod0.glb build-output/
-          cp CapibaraAlpha/assets/capibara_beta_lod1.glb build-output/
-          cp CapibaraAlpha/assets/capibara_beta_lod2.glb build-output/
-          cp CapibaraAlpha/data/capibara_expressions.json build-output/
-          cp CapibaraAlpha/data/capibara_animations.json build-output/
-          cp CapibaraAlpha/README_BETA_1_0.md build-output/
-          cp CapibaraAlpha/icon.png build-output/capibara_beta_icon.png
-          sha256sum build-output/Capibara-Beta-1.0.apk > build-output/Capibara-Beta-1.0.apk.sha256
+          cp CapibaraAlpha/output/Capibara-V3-Art-Rebuild.apk build-output/
+          cp CapibaraAlpha/assets/capibara_beta_lod0.glb build-output/capibara_v3_lod0.glb
+          cp CapibaraAlpha/assets/capibara_beta_lod1.glb build-output/capibara_v3_lod1.glb
+          cp CapibaraAlpha/assets/capibara_beta_lod2.glb build-output/capibara_v3_lod2.glb
+          cp CapibaraAlpha/data/capibara_expressions.json build-output/ || true
+          cp CapibaraAlpha/data/capibara_animations.json build-output/ || true
+          cp CapibaraAlpha/icon.png build-output/capibara_v3_icon.png
+          sha256sum build-output/Capibara-V3-Art-Rebuild.apk > build-output/Capibara-V3-Art-Rebuild.apk.sha256
           (
             cd CapibaraAlpha
-            zip -qr ../build-output/Capibara-Beta-1.0-source.zip . \
+            zip -qr ../build-output/Capibara-V3-Art-Rebuild-source.zip . \
               -x "output/*" ".godot/*"
           )
           find build-output -maxdepth 1 -type f -printf "%f  %s bytes\n" | sort
 
-      - name: Upload Beta package
+      - name: Upload V3 package
         uses: actions/upload-artifact@v4
         with:
-          name: Capibara-Beta-1.0-12-iteraciones
+          name: Capibara-V3-Art-Rebuild
           path: build-output/
           if-no-files-found: error
           retention-days: 30
