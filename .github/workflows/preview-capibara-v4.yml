@@ -1,4 +1,4 @@
-name: Preview Capibara V14 Fused Head
+name: Preview Capibara V15 Capybara Skull
 
 on:
   pull_request:
@@ -7,6 +7,7 @@ on:
       - ".github/workflows/preview-capibara-v4.yml"
       - "capibara-alpha-source/create_capybara_v13_character_rebuild.py"
       - "capibara-alpha-source/apply_v14_fused_head_sculpt.py"
+      - "capibara-alpha-source/apply_v15_capybara_skull.py"
   workflow_dispatch:
 
 permissions:
@@ -21,11 +22,12 @@ jobs:
         with:
           ref: agent/capibara-alpha-godot
 
-      - name: Prepare V14 source
+      - name: Prepare V15 source
         run: |
-          cp capibara-alpha-source/create_capybara_v13_character_rebuild.py /tmp/create_capybara_v14.py
-          python capibara-alpha-source/apply_v14_fused_head_sculpt.py /tmp/create_capybara_v14.py
-          python -m py_compile /tmp/create_capybara_v14.py
+          cp capibara-alpha-source/create_capybara_v13_character_rebuild.py /tmp/create_capybara_v15.py
+          python capibara-alpha-source/apply_v14_fused_head_sculpt.py /tmp/create_capybara_v15.py
+          python capibara-alpha-source/apply_v15_capybara_skull.py /tmp/create_capybara_v15.py
+          python -m py_compile /tmp/create_capybara_v15.py
           mkdir -p preview-output
 
       - name: Install Blender Portable
@@ -37,11 +39,11 @@ jobs:
           tar -xf blender.tar.xz -C blender-portable --strip-components=1
           chmod +x blender-portable/blender
 
-      - name: Render V14 fused head in Blender
+      - name: Render V15 capybara skull in Blender
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"
         run: |
-          xvfb-run -a blender-portable/blender -b --python /tmp/create_capybara_v14.py -- "$PWD/preview-output"
+          xvfb-run -a blender-portable/blender -b --python /tmp/create_capybara_v15.py -- "$PWD/preview-output"
           test -s preview-output/capibara_v13_character_rebuild.blend
           test -s preview-output/capibara_v13_front.png
           test -s preview-output/capibara_v13_profile.png
@@ -49,7 +51,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Capibara-V14-Fused-Head-Real-Blender
+          name: Capibara-V15-Capybara-Skull-Real-Blender
           path: preview-output/
           if-no-files-found: error
           retention-days: 14
