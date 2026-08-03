@@ -1,4 +1,4 @@
-name: Preview Capibara V16 Head Assembly
+name: Preview Capibara V17 Hero Assembly
 
 on:
   pull_request:
@@ -9,6 +9,7 @@ on:
       - "capibara-alpha-source/apply_v14_fused_head_sculpt.py"
       - "capibara-alpha-source/apply_v15_capybara_skull.py"
       - "capibara-alpha-source/apply_v16_head_assembly_correction.py"
+      - "capibara-alpha-source/apply_v17_hero_assembly.py"
   workflow_dispatch:
 
 permissions:
@@ -23,13 +24,14 @@ jobs:
         with:
           ref: agent/capibara-alpha-godot
 
-      - name: Prepare V16 source
+      - name: Prepare V17 source
         run: |
-          cp capibara-alpha-source/create_capybara_v13_character_rebuild.py /tmp/create_capybara_v16.py
-          python capibara-alpha-source/apply_v14_fused_head_sculpt.py /tmp/create_capybara_v16.py
-          python capibara-alpha-source/apply_v15_capybara_skull.py /tmp/create_capybara_v16.py
-          python capibara-alpha-source/apply_v16_head_assembly_correction.py /tmp/create_capybara_v16.py
-          python -m py_compile /tmp/create_capybara_v16.py
+          cp capibara-alpha-source/create_capybara_v13_character_rebuild.py /tmp/create_capybara_v17.py
+          python capibara-alpha-source/apply_v14_fused_head_sculpt.py /tmp/create_capybara_v17.py
+          python capibara-alpha-source/apply_v15_capybara_skull.py /tmp/create_capybara_v17.py
+          python capibara-alpha-source/apply_v16_head_assembly_correction.py /tmp/create_capybara_v17.py
+          python capibara-alpha-source/apply_v17_hero_assembly.py /tmp/create_capybara_v17.py
+          python -m py_compile /tmp/create_capybara_v17.py
           mkdir -p preview-output
 
       - name: Install Blender Portable
@@ -41,11 +43,11 @@ jobs:
           tar -xf blender.tar.xz -C blender-portable --strip-components=1
           chmod +x blender-portable/blender
 
-      - name: Render V16 head assembly in Blender
+      - name: Render V17 hero assembly in Blender
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"
         run: |
-          xvfb-run -a blender-portable/blender -b --python /tmp/create_capybara_v16.py -- "$PWD/preview-output"
+          xvfb-run -a blender-portable/blender -b --python /tmp/create_capybara_v17.py -- "$PWD/preview-output"
           test -s preview-output/capibara_v13_character_rebuild.blend
           test -s preview-output/capibara_v13_front.png
           test -s preview-output/capibara_v13_profile.png
@@ -53,7 +55,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Capibara-V16-Head-Assembly-Real-Blender
+          name: Capibara-V17-Hero-Assembly-Real-Blender
           path: preview-output/
           if-no-files-found: error
           retention-days: 14
