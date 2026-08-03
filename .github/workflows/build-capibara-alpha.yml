@@ -1,14 +1,181 @@
-name: Capibara staging
+name: Build Capibara Beta 1.0
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - agent/capibara-alpha-godot
+    paths:
+      - "capibara-alpha-source/BUILD_READY"
+      - "capibara-alpha-source/production_overlay_archive/**"
+      - "capibara-alpha-source/apply_all_iterations.py"
+      - ".github/workflows/build-capibara-alpha.yml"
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
 
 jobs:
-  staging:
-    runs-on: ubuntu-latest
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+
     steps:
-      - name: Staging production overlay
-        run: echo "Preparing the 12-iteration Capibara Beta pipeline"
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Restore source project and apply 12 iterations
+        run: |
+          cat capibara-alpha-source/part_*.b64 | base64 --decode > CapibaraAlpha-source.tar.gz
+          tar -xzf CapibaraAlpha-source.tar.gz
+          python capibara-alpha-source/apply_build_fixes.py
+          python capibara-alpha-source/apply_all_iterations.py
+          test -f CapibaraAlpha/project.godot
+          test -f CapibaraAlpha/tools/create_capybara.py
+          test -f CapibaraAlpha/shaders/fur_mobile.gdshader
+          python -m py_compile CapibaraAlpha/tools/create_capybara.py
+
+      - name: Configure Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Configure Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.1"
+
+      - name: Install Blender runtime libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libegl1 libgl1 libgl1-mesa-dri libglx-mesa0 \
+            libx11-6 libxext6 libxi6 libxrender1 libxfixes3 \
+            libxxf86vm1 libxkbcommon0 xvfb
+
+      - name: Download Blender Portable 4.5 LTS
+        run: |
+          curl -fL --retry 5 --retry-delay 3 \
+            "https://cdn.builder.blender.org/download/daily/archive/blender-4.5.11-stable%2Bv45.4db51e9d1e1e-linux.x86_64-release.tar.xz" \
+            -o blender-portable.tar.xz
+          mkdir -p blender-portable
+          tar -xf blender-portable.tar.xz -C blender-portable --strip-components=1
+          chmod +x blender-portable/blender
+          blender-portable/blender --version
+
+      - name: Execute 12 Blender iterations
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          mkdir -p build-output
+          xvfb-run -a blender-portable/blender -b \
+            --python CapibaraAlpha/tools/create_capybara.py \
+            -- "$PWD/build-output" "$PWD/CapibaraAlpha"
+          test -s CapibaraAlpha/assets/capibara_beta_lod0.glb
+          test -s CapibaraAlpha/assets/capibara_beta_lod1.glb
+          test -s CapibaraAlpha/assets/capibara_beta_lod2.glb
+          test -s build-output/capibara_beta_1_0.blend
+          test -s build-output/capibara_beta_front.png
+          test -s build-output/capibara_beta_profile.png
+          test -s build-output/capibara_beta_three_quarter.png
+          test -s build-output/capibara_beta_rear.png
+          test -s build-output/capibara_beta_face.png
+          test -s build-output/capibara_beta_validation.json
+          test -s build-output/ITERATIONS_COMPLETED.txt
+          test -s CapibaraAlpha/icon.png
+
+      - name: Download Godot 4.7.1 and Android export templates
+        run: |
+          curl -fL --retry 5 --retry-delay 3 \
+            "https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip" \
+            -o godot.zip
+          unzip -q godot.zip -d godot-bin
+          GODOT_BIN="$(find godot-bin -maxdepth 1 -type f -name 'Godot*' | head -n 1)"
+          chmod +x "$GODOT_BIN"
+          echo "GODOT=$PWD/$GODOT_BIN" >> "$GITHUB_ENV"
+          "$GODOT_BIN" --version
+
+          curl -fL --retry 5 --retry-delay 3 \
+            "https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_export_templates.tpz" \
+            -o templates.tpz
+          rm -rf templates-unpack
+          mkdir -p templates-unpack
+          unzip -q templates.tpz -d templates-unpack
+          TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/4.7.1.stable"
+          mkdir -p "$TEMPLATE_DIR"
+          if [ -d templates-unpack/templates ]; then
+            cp -a templates-unpack/templates/. "$TEMPLATE_DIR/"
+          else
+            cp -a templates-unpack/. "$TEMPLATE_DIR/"
+          fi
+          test -s "$TEMPLATE_DIR/android_debug.apk"
+
+      - name: Create Android debug keystore
+        run: |
+          mkdir -p "$HOME/.android"
+          if [ ! -f "$HOME/.android/debug.keystore" ]; then
+            keytool -genkeypair -v \
+              -keystore "$HOME/.android/debug.keystore" \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -dname "CN=Android Debug,O=Capibara Beta,C=CL" \
+              -keyalg RSA -keysize 2048 -validity 10000
+          fi
+
+      - name: Import and validate Godot project
+        run: |
+          set -o pipefail
+          "$GODOT" --headless --editor --path CapibaraAlpha --quit-after 35 2>&1 | tee godot-import.log
+          test -d CapibaraAlpha/.godot
+          if grep -E "SCRIPT ERROR|Parse Error|Failed to load script" godot-import.log; then
+            echo "Godot validation failed"
+            exit 1
+          fi
+
+      - name: Export Android APK for 32 and 64 bit ARM
+        run: |
+          APK_PATH="$PWD/CapibaraAlpha/output/Capibara-Beta-1.0.apk"
+          mkdir -p "$(dirname "$APK_PATH")"
+          "$GODOT" --headless --path CapibaraAlpha \
+            --export-debug "Android" \
+            "$APK_PATH"
+          test -s "$APK_PATH"
+          unzip -t "$APK_PATH"
+          unzip -l "$APK_PATH" | grep "lib/armeabi-v7a/"
+          unzip -l "$APK_PATH" | grep "lib/arm64-v8a/"
+          "$ANDROID_HOME/build-tools/35.0.1/apksigner" verify \
+            --verbose --print-certs "$APK_PATH" \
+            > build-output/Capibara-Beta-1.0-signature.txt
+
+      - name: Package final Beta
+        run: |
+          cp CapibaraAlpha/output/Capibara-Beta-1.0.apk build-output/
+          cp CapibaraAlpha/assets/capibara_beta_lod0.glb build-output/
+          cp CapibaraAlpha/assets/capibara_beta_lod1.glb build-output/
+          cp CapibaraAlpha/assets/capibara_beta_lod2.glb build-output/
+          cp CapibaraAlpha/data/capibara_expressions.json build-output/
+          cp CapibaraAlpha/data/capibara_animations.json build-output/
+          cp CapibaraAlpha/README_BETA_1_0.md build-output/
+          cp CapibaraAlpha/icon.png build-output/capibara_beta_icon.png
+          sha256sum build-output/Capibara-Beta-1.0.apk > build-output/Capibara-Beta-1.0.apk.sha256
+          (
+            cd CapibaraAlpha
+            zip -qr ../build-output/Capibara-Beta-1.0-source.zip . \
+              -x "output/*" ".godot/*"
+          )
+          find build-output -maxdepth 1 -type f -printf "%f  %s bytes\n" | sort
+
+      - name: Upload Beta package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Capibara-Beta-1.0-12-iteraciones
+          path: build-output/
+          if-no-files-found: error
+          retention-days: 30
