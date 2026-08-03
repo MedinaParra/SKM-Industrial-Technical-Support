@@ -1,23 +1,11 @@
-name: Preview Capibara V12 Hero Likeness
+name: Preview Capibara V13 Character Rebuild
 
 on:
   pull_request:
     branches: [main]
     paths:
       - ".github/workflows/preview-capibara-v4.yml"
-      - "capibara-alpha-source/create_capybara_v4_clean_surface.py"
-      - "capibara-alpha-source/apply_v4_1_capybara_identity.py"
-      - "capibara-alpha-source/apply_v4_2_target_proportions_fur.py"
-      - "capibara-alpha-source/apply_v4_3_face_body_fur_refine.py"
-      - "capibara-alpha-source/apply_v5_sculpt_master.py"
-      - "capibara-alpha-source/apply_v6_reference_match.py"
-      - "capibara-alpha-source/restore_v6_geometry_helpers.py"
-      - "capibara-alpha-source/apply_v7_unified_character_core.py"
-      - "capibara-alpha-source/apply_v8_hero_proportions.py"
-      - "capibara-alpha-source/apply_v9_face_appeal.py"
-      - "capibara-alpha-source/apply_v10_reference_face_anatomy.py"
-      - "capibara-alpha-source/apply_v11_integrated_face.py"
-      - "capibara-alpha-source/apply_v12_hero_likeness.py"
+      - "capibara-alpha-source/create_capybara_v13_character_rebuild.py"
   workflow_dispatch:
 
 permissions:
@@ -32,33 +20,9 @@ jobs:
         with:
           ref: agent/capibara-alpha-godot
 
-      - name: Prepare and validate V12 source
+      - name: Validate V13 source
         run: |
-          cp capibara-alpha-source/create_capybara_v4_clean_surface.py /tmp/create_capybara_v12.py
-          python capibara-alpha-source/apply_v4_1_capybara_identity.py /tmp/create_capybara_v12.py
-          python capibara-alpha-source/apply_v4_2_target_proportions_fur.py /tmp/create_capybara_v12.py
-          python capibara-alpha-source/apply_v4_3_face_body_fur_refine.py /tmp/create_capybara_v12.py
-          python capibara-alpha-source/apply_v5_sculpt_master.py /tmp/create_capybara_v12.py
-          cp /tmp/create_capybara_v12.py /tmp/create_capybara_v5_helpers.py
-          python capibara-alpha-source/apply_v6_reference_match.py /tmp/create_capybara_v12.py
-          python capibara-alpha-source/restore_v6_geometry_helpers.py /tmp/create_capybara_v12.py /tmp/create_capybara_v5_helpers.py
-          python capibara-alpha-source/apply_v7_unified_character_core.py /tmp/create_capybara_v12.py
-          python capibara-alpha-source/apply_v8_hero_proportions.py /tmp/create_capybara_v12.py
-          python capibara-alpha-source/apply_v9_face_appeal.py /tmp/create_capybara_v12.py
-          python capibara-alpha-source/apply_v10_reference_face_anatomy.py /tmp/create_capybara_v12.py
-          python capibara-alpha-source/apply_v11_integrated_face.py /tmp/create_capybara_v12.py
-          python capibara-alpha-source/apply_v12_hero_likeness.py /tmp/create_capybara_v12.py
-          python - <<'PY'
-          from pathlib import Path
-          p = Path('/tmp/create_capybara_v12.py')
-          s = p.read_text(encoding='utf-8')
-          old = 'world = scene.world\nworld.use_nodes = True'
-          new = 'world = scene.world\nif world is None:\n    world = bpy.data.worlds.new("Capibara World")\n    scene.world = world\nworld.use_nodes = True'
-          if old not in s:
-              raise RuntimeError('World patch target not found')
-          p.write_text(s.replace(old, new, 1), encoding='utf-8')
-          PY
-          python -m py_compile /tmp/create_capybara_v12.py
+          python -m py_compile capibara-alpha-source/create_capybara_v13_character_rebuild.py
           mkdir -p preview-output
 
       - name: Install Blender Portable
@@ -70,19 +34,19 @@ jobs:
           tar -xf blender.tar.xz -C blender-portable --strip-components=1
           chmod +x blender-portable/blender
 
-      - name: Render V12 hero likeness in Blender
+      - name: Render V13 character rebuild in Blender
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"
         run: |
-          xvfb-run -a blender-portable/blender -b --python /tmp/create_capybara_v12.py -- "$PWD/preview-output"
-          test -s preview-output/capibara_v4_clean_surface.blend
-          test -s preview-output/capibara_v4_front.png
-          test -s preview-output/capibara_v4_profile.png
-          test -s preview-output/capibara_v4_three_quarter.png
+          xvfb-run -a blender-portable/blender -b --python capibara-alpha-source/create_capybara_v13_character_rebuild.py -- "$PWD/preview-output"
+          test -s preview-output/capibara_v13_character_rebuild.blend
+          test -s preview-output/capibara_v13_front.png
+          test -s preview-output/capibara_v13_profile.png
+          test -s preview-output/capibara_v13_three_quarter.png
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Capibara-V12-Hero-Likeness-Real-Blender
+          name: Capibara-V13-Character-Rebuild-Real-Blender
           path: preview-output/
           if-no-files-found: error
           retention-days: 14
