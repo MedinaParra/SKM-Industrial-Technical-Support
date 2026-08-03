@@ -1,4 +1,4 @@
-name: Preview Capibara V10 Reference Face
+name: Preview Capibara V11 Integrated Face
 
 on:
   pull_request:
@@ -16,6 +16,7 @@ on:
       - "capibara-alpha-source/apply_v8_hero_proportions.py"
       - "capibara-alpha-source/apply_v9_face_appeal.py"
       - "capibara-alpha-source/apply_v10_reference_face_anatomy.py"
+      - "capibara-alpha-source/apply_v11_integrated_face.py"
   workflow_dispatch:
 
 permissions:
@@ -30,23 +31,24 @@ jobs:
         with:
           ref: agent/capibara-alpha-godot
 
-      - name: Prepare and validate V10 source
+      - name: Prepare and validate V11 source
         run: |
-          cp capibara-alpha-source/create_capybara_v4_clean_surface.py /tmp/create_capybara_v10.py
-          python capibara-alpha-source/apply_v4_1_capybara_identity.py /tmp/create_capybara_v10.py
-          python capibara-alpha-source/apply_v4_2_target_proportions_fur.py /tmp/create_capybara_v10.py
-          python capibara-alpha-source/apply_v4_3_face_body_fur_refine.py /tmp/create_capybara_v10.py
-          python capibara-alpha-source/apply_v5_sculpt_master.py /tmp/create_capybara_v10.py
-          cp /tmp/create_capybara_v10.py /tmp/create_capybara_v5_helpers.py
-          python capibara-alpha-source/apply_v6_reference_match.py /tmp/create_capybara_v10.py
-          python capibara-alpha-source/restore_v6_geometry_helpers.py /tmp/create_capybara_v10.py /tmp/create_capybara_v5_helpers.py
-          python capibara-alpha-source/apply_v7_unified_character_core.py /tmp/create_capybara_v10.py
-          python capibara-alpha-source/apply_v8_hero_proportions.py /tmp/create_capybara_v10.py
-          python capibara-alpha-source/apply_v9_face_appeal.py /tmp/create_capybara_v10.py
-          python capibara-alpha-source/apply_v10_reference_face_anatomy.py /tmp/create_capybara_v10.py
+          cp capibara-alpha-source/create_capybara_v4_clean_surface.py /tmp/create_capybara_v11.py
+          python capibara-alpha-source/apply_v4_1_capybara_identity.py /tmp/create_capybara_v11.py
+          python capibara-alpha-source/apply_v4_2_target_proportions_fur.py /tmp/create_capybara_v11.py
+          python capibara-alpha-source/apply_v4_3_face_body_fur_refine.py /tmp/create_capybara_v11.py
+          python capibara-alpha-source/apply_v5_sculpt_master.py /tmp/create_capybara_v11.py
+          cp /tmp/create_capybara_v11.py /tmp/create_capybara_v5_helpers.py
+          python capibara-alpha-source/apply_v6_reference_match.py /tmp/create_capybara_v11.py
+          python capibara-alpha-source/restore_v6_geometry_helpers.py /tmp/create_capybara_v11.py /tmp/create_capybara_v5_helpers.py
+          python capibara-alpha-source/apply_v7_unified_character_core.py /tmp/create_capybara_v11.py
+          python capibara-alpha-source/apply_v8_hero_proportions.py /tmp/create_capybara_v11.py
+          python capibara-alpha-source/apply_v9_face_appeal.py /tmp/create_capybara_v11.py
+          python capibara-alpha-source/apply_v10_reference_face_anatomy.py /tmp/create_capybara_v11.py
+          python capibara-alpha-source/apply_v11_integrated_face.py /tmp/create_capybara_v11.py
           python - <<'PY'
           from pathlib import Path
-          p = Path('/tmp/create_capybara_v10.py')
+          p = Path('/tmp/create_capybara_v11.py')
           s = p.read_text(encoding='utf-8')
           old = 'world = scene.world\nworld.use_nodes = True'
           new = 'world = scene.world\nif world is None:\n    world = bpy.data.worlds.new("Capibara World")\n    scene.world = world\nworld.use_nodes = True'
@@ -54,7 +56,7 @@ jobs:
               raise RuntimeError('World patch target not found')
           p.write_text(s.replace(old, new, 1), encoding='utf-8')
           PY
-          python -m py_compile /tmp/create_capybara_v10.py
+          python -m py_compile /tmp/create_capybara_v11.py
           mkdir -p preview-output
 
       - name: Install Blender Portable
@@ -66,11 +68,11 @@ jobs:
           tar -xf blender.tar.xz -C blender-portable --strip-components=1
           chmod +x blender-portable/blender
 
-      - name: Render V10 reference face in Blender
+      - name: Render V11 integrated face in Blender
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"
         run: |
-          xvfb-run -a blender-portable/blender -b --python /tmp/create_capybara_v10.py -- "$PWD/preview-output"
+          xvfb-run -a blender-portable/blender -b --python /tmp/create_capybara_v11.py -- "$PWD/preview-output"
           test -s preview-output/capibara_v4_clean_surface.blend
           test -s preview-output/capibara_v4_front.png
           test -s preview-output/capibara_v4_profile.png
@@ -78,7 +80,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Capibara-V10-Reference-Face-Real-Blender
+          name: Capibara-V11-Integrated-Face-Real-Blender
           path: preview-output/
           if-no-files-found: error
           retention-days: 14
