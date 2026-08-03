@@ -1,6 +1,7 @@
 from pathlib import Path
 import base64
 import io
+import runpy
 import tarfile
 
 project = Path("CapibaraAlpha")
@@ -47,6 +48,14 @@ for old in ('version/code=1', 'version/code=2', 'version/code=3'):
 for old in ('version/name="0.1.0-alpha"', 'version/name="0.1.1-alpha"', 'version/name="0.2.0-alpha"'):
     text = text.replace(old, 'version/name="1.0.0-beta"')
 preset.write_text(text, encoding="utf-8")
+
+# Apply the Godot static-typing/runtime loading correction as part of the main
+# overlay process. This keeps the full build and the fast diagnostic identical.
+godot_patch = Path("capibara-alpha-source/patch_godot_beta.py")
+if godot_patch.is_file():
+    runpy.run_path(str(godot_patch), run_name="__main__")
+else:
+    raise RuntimeError("Godot beta patch was not found")
 
 required = [
     project / "tools/create_capybara.py",
