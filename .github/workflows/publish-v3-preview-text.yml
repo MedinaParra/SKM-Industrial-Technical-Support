@@ -26,7 +26,7 @@ jobs:
           python -m pip install --quiet pillow
           python - <<'PY'
           from pathlib import Path
-          from PIL import Image, ImageOps, ImageDraw
+          from PIL import Image, ImageDraw
           import base64, shutil
 
           root = Path('capibara-alpha-source/v3-previews')
@@ -39,24 +39,22 @@ jobs:
           panels = []
           for path, label in zip(paths, labels):
               img = Image.open(path).convert('RGB')
-              img.thumbnail((320, 320), Image.Resampling.LANCZOS)
-              canvas = Image.new('RGB', (320, 350), (238, 236, 228))
-              x = (320 - img.width) // 2
-              canvas.paste(img, (x, 0))
-              draw = ImageDraw.Draw(canvas)
-              draw.text((12, 326), label, fill=(25, 25, 25))
+              img.thumbnail((300, 300), Image.Resampling.LANCZOS)
+              canvas = Image.new('RGB', (300, 326), (238, 236, 228))
+              canvas.paste(img, ((300 - img.width) // 2, 0))
+              ImageDraw.Draw(canvas).text((10, 306), label, fill=(25, 25, 25))
               panels.append(canvas)
-          sheet = Image.new('RGB', (960, 350), (238, 236, 228))
+          sheet = Image.new('RGB', (900, 326), (238, 236, 228))
           for i, panel in enumerate(panels):
-              sheet.paste(panel, (i * 320, 0))
+              sheet.paste(panel, (i * 300, 0))
           out_dir = Path('capibara-alpha-source/v3-preview-export')
           if out_dir.exists():
               shutil.rmtree(out_dir)
           out_dir.mkdir(parents=True)
           jpg = out_dir / 'capibara_v3_contact_sheet.jpg'
-          sheet.save(jpg, quality=78, optimize=True, progressive=True)
+          sheet.save(jpg, quality=68, optimize=True, progressive=False)
           encoded = base64.b64encode(jpg.read_bytes()).decode('ascii')
-          chunk = 12000
+          chunk = 2000
           for i in range(0, len(encoded), chunk):
               (out_dir / f'part_{i // chunk:03d}.b64').write_text(encoded[i:i+chunk], encoding='ascii')
           (out_dir / 'manifest.txt').write_text(
@@ -70,6 +68,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add capibara-alpha-source/v3-preview-export
-          git diff --cached --quiet || git commit -m "art: publish Capibara V3 preview contact sheet"
+          git add -A capibara-alpha-source/v3-preview-export
+          git diff --cached --quiet || git commit -m "art: republish Capibara V3 preview in inspectable chunks"
           git push origin HEAD:agent/capibara-alpha-godot
