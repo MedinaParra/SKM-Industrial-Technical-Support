@@ -33,7 +33,14 @@ jobs:
         run: |
           mkdir -p CapibaraPreview/tools CapibaraPreview/assets CapibaraPreview/data preview-output
           cp capibara-alpha-source/create_capybara_v3.py CapibaraPreview/tools/create_capybara.py
-          python capibara-alpha-source/apply_v3_1_cute_patch.py CapibaraPreview/tools/create_capybara.py
+          python - <<'PY'
+          from pathlib import Path
+          src = Path('capibara-alpha-source/apply_v3_1_cute_patch.py').read_text(encoding='utf-8')
+          src = src.replace("replace_exact('''        add_uv(f\"Nostril_", "replace_exact('''    add_uv(f\"Nostril_")
+          src = src.replace("''', '''        add_uv(f\"Nostril_", "''', '''    add_uv(f\"Nostril_")
+          Path('/tmp/apply_v3_1_cute_patch.py').write_text(src, encoding='utf-8')
+          PY
+          python /tmp/apply_v3_1_cute_patch.py CapibaraPreview/tools/create_capybara.py
           python - <<'PY'
           from pathlib import Path
           p = Path('CapibaraPreview/tools/create_capybara.py')
