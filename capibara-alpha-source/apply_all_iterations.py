@@ -1,18 +1,26 @@
 from pathlib import Path
-import shutil
+import base64
+import io
+import tarfile
 
-source = Path("capibara-alpha-source/production_overlay")
 project = Path("CapibaraAlpha")
-if not source.exists() or not project.exists():
-    raise RuntimeError("Overlay or restored CapibaraAlpha project was not found")
+archive_dir = Path("capibara-alpha-source/production_overlay_archive")
+if not project.exists() or not archive_dir.exists():
+    raise RuntimeError("Restored project or production overlay archive was not found")
 
-for item in source.rglob("*"):
-    if not item.is_file():
-        continue
-    rel = item.relative_to(source)
-    dest = project / rel
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(item, dest)
+parts = sorted(archive_dir.glob("part_*.b64"))
+if not parts:
+    raise RuntimeError("No production overlay archive parts were found")
+
+encoded = "".join(part.read_text(encoding="ascii").strip() for part in parts)
+archive_bytes = base64.b64decode(encoded, validate=True)
+with tarfile.open(fileobj=io.BytesIO(archive_bytes), mode="r:gz") as archive:
+    root = project.resolve()
+    for member in archive.getmembers():
+        target = (root / member.name).resolve()
+        if root not in target.parents and target != root:
+            raise RuntimeError(f"Unsafe archive path: {member.name}")
+    archive.extractall(project, filter="data")
 
 # Project metadata.
 project_file = project / "project.godot"
@@ -39,5 +47,15 @@ for old in ('version/code=1', 'version/code=2', 'version/code=3'):
 for old in ('version/name="0.1.0-alpha"', 'version/name="0.1.1-alpha"', 'version/name="0.2.0-alpha"'):
     text = text.replace(old, 'version/name="1.0.0-beta"')
 preset.write_text(text, encoding="utf-8")
+
+required = [
+    project / "tools/create_capybara.py",
+    project / "main.gd",
+    project / "shaders/fur_mobile.gdshader",
+    project / "README_BETA_1_0.md",
+]
+missing = [str(path) for path in required if not path.is_file()]
+if missing:
+    raise RuntimeError(f"Incomplete production overlay: {missing}")
 
 print("CAPIBARA_12_ITERATIONS_OVERLAY_OK")
