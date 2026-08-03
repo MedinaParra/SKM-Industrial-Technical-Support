@@ -9,6 +9,7 @@ on:
       - "capibara-alpha-source/BUILD_READY"
       - "capibara-alpha-source/production_overlay_archive/**"
       - "capibara-alpha-source/apply_all_iterations.py"
+      - "capibara-alpha-source/fix_beta_export.py"
       - ".github/workflows/build-capibara-alpha.yml"
   pull_request:
     branches:
@@ -32,10 +33,12 @@ jobs:
           tar -xzf CapibaraAlpha-source.tar.gz
           python capibara-alpha-source/apply_build_fixes.py
           python capibara-alpha-source/apply_all_iterations.py
+          python capibara-alpha-source/fix_beta_export.py
           test -f CapibaraAlpha/project.godot
           test -f CapibaraAlpha/tools/create_capybara.py
+          test -f CapibaraAlpha/tools/export_capybara_glb.py
           test -f CapibaraAlpha/shaders/fur_mobile.gdshader
-          python -m py_compile CapibaraAlpha/tools/create_capybara.py
+          python -m py_compile CapibaraAlpha/tools/create_capybara.py CapibaraAlpha/tools/export_capybara_glb.py
 
       - name: Configure Java 17
         uses: actions/setup-java@v4
@@ -69,26 +72,54 @@ jobs:
           chmod +x blender-portable/blender
           blender-portable/blender --version
 
-      - name: Execute 12 Blender iterations
+      - name: Execute 12 Blender iterations and real verification renders
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"
         run: |
-          mkdir -p build-output
+          mkdir -p build-output CapibaraAlpha/assets
           xvfb-run -a blender-portable/blender -b \
             --python CapibaraAlpha/tools/create_capybara.py \
             -- "$PWD/build-output" "$PWD/CapibaraAlpha"
-          test -s CapibaraAlpha/assets/capibara_beta_lod0.glb
-          test -s CapibaraAlpha/assets/capibara_beta_lod1.glb
-          test -s CapibaraAlpha/assets/capibara_beta_lod2.glb
           test -s build-output/capibara_beta_1_0.blend
           test -s build-output/capibara_beta_front.png
           test -s build-output/capibara_beta_profile.png
           test -s build-output/capibara_beta_three_quarter.png
           test -s build-output/capibara_beta_rear.png
           test -s build-output/capibara_beta_face.png
+          test -s build-output/capibara_beta_expression_surprise.png
+          test -s build-output/capibara_beta_expression_curious.png
+          test -s build-output/capibara_beta_expression_sleepy.png
           test -s build-output/capibara_beta_validation.json
           test -s build-output/ITERATIONS_COMPLETED.txt
           test -s CapibaraAlpha/icon.png
+
+      - name: Export LOD0 GLB in isolated Blender process
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          xvfb-run -a blender-portable/blender -b build-output/capibara_beta_1_0.blend \
+            --python CapibaraAlpha/tools/export_capybara_glb.py \
+            -- "$PWD/CapibaraAlpha/assets/capibara_beta_lod0.glb" 1.0
+          test -s CapibaraAlpha/assets/capibara_beta_lod0.glb
+
+      - name: Export LOD1 GLB in isolated Blender process
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          xvfb-run -a blender-portable/blender -b build-output/capibara_beta_1_0.blend \
+            --python CapibaraAlpha/tools/export_capybara_glb.py \
+            -- "$PWD/CapibaraAlpha/assets/capibara_beta_lod1.glb" 0.58
+          test -s CapibaraAlpha/assets/capibara_beta_lod1.glb
+
+      - name: Export LOD2 GLB in isolated Blender process
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          xvfb-run -a blender-portable/blender -b build-output/capibara_beta_1_0.blend \
+            --python CapibaraAlpha/tools/export_capybara_glb.py \
+            -- "$PWD/CapibaraAlpha/assets/capibara_beta_lod2.glb" 0.30
+          test -s CapibaraAlpha/assets/capibara_beta_lod2.glb
+          cp CapibaraAlpha/assets/capibara_beta_lod0.glb CapibaraAlpha/assets/capibara_alpha.glb
 
       - name: Download Godot 4.7.1 and Android export templates
         run: |
