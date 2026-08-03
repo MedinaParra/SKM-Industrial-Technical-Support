@@ -9,6 +9,7 @@ on:
       - ".github/workflows/preview-capibara-v3.yml"
       - "capibara-alpha-source/create_capybara_v3.py"
       - "capibara-alpha-source/apply_v3_1_cute_patch.py"
+      - "capibara-alpha-source/apply_v3_2_face_simplification.py"
   pull_request:
     branches:
       - main
@@ -16,6 +17,7 @@ on:
       - ".github/workflows/preview-capibara-v3.yml"
       - "capibara-alpha-source/create_capybara_v3.py"
       - "capibara-alpha-source/apply_v3_1_cute_patch.py"
+      - "capibara-alpha-source/apply_v3_2_face_simplification.py"
 
 permissions:
   contents: write
@@ -29,7 +31,7 @@ jobs:
         with:
           ref: agent/capibara-alpha-godot
 
-      - name: Prepare V3.1 cute generator
+      - name: Prepare V3.2 simplified capybara generator
         run: |
           mkdir -p CapibaraPreview/tools CapibaraPreview/assets CapibaraPreview/data preview-output
           cp capibara-alpha-source/create_capybara_v3.py CapibaraPreview/tools/create_capybara.py
@@ -41,6 +43,7 @@ jobs:
           Path('/tmp/apply_v3_1_cute_patch.py').write_text(src, encoding='utf-8')
           PY
           python /tmp/apply_v3_1_cute_patch.py CapibaraPreview/tools/create_capybara.py
+          python capibara-alpha-source/apply_v3_2_face_simplification.py CapibaraPreview/tools/create_capybara.py
           python - <<'PY'
           from pathlib import Path
           p = Path('CapibaraPreview/tools/create_capybara.py')
@@ -50,7 +53,7 @@ jobs:
           marker = 'render_view("capibara_beta_three_quarter.png", (5.7, -8.0, 3.48), (0, -0.05, 2.22), 61, "big_smile")'
           if marker not in s:
               raise RuntimeError('Preview stop marker not found')
-          s = s.replace(marker, marker + '\nprint("CAPIBARA_V3_1_FAST_PREVIEW_OK")\nraise SystemExit(0)', 1)
+          s = s.replace(marker, marker + '\nprint("CAPIBARA_V3_2_FAST_PREVIEW_OK")\nraise SystemExit(0)', 1)
           p.write_text(s, encoding='utf-8')
           PY
           python -m py_compile CapibaraPreview/tools/create_capybara.py
@@ -81,7 +84,7 @@ jobs:
           test -s preview-output/capibara_beta_profile.png
           test -s preview-output/capibara_beta_three_quarter.png
 
-      - name: Save V3.1 real previews in branch
+      - name: Save V3.2 real previews in branch
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         run: |
           mkdir -p capibara-alpha-source/v3-previews
@@ -91,13 +94,13 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add capibara-alpha-source/v3-previews
-          git diff --cached --quiet || git commit -m "art: update Capibara V3.1 cute Blender previews"
+          git diff --cached --quiet || git commit -m "art: update Capibara V3.2 Blender previews"
           git push origin HEAD:agent/capibara-alpha-godot
 
       - name: Upload art preview
         uses: actions/upload-artifact@v4
         with:
-          name: Capibara-V3.1-Preview-Real-Blender
+          name: Capibara-V3.2-Preview-Real-Blender
           path: preview-output/
           if-no-files-found: error
           retention-days: 14
