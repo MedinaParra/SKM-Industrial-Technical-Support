@@ -1,0 +1,69 @@
+name: Preview Capibara V3
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/capibara-alpha-godot
+    paths:
+      - ".github/workflows/preview-capibara-v3.yml"
+      - "capibara-alpha-source/create_capybara_v3.py.gz.b64"
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore V3 generator
+        run: |
+          mkdir -p CapibaraPreview/tools CapibaraPreview/assets CapibaraPreview/data preview-output
+          base64 --decode capibara-alpha-source/create_capybara_v3.py.gz.b64 | gzip -d > CapibaraPreview/tools/create_capybara.py
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('CapibaraPreview/tools/create_capybara.py')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace('res=(1024, 1024)', 'res=(640, 640)')
+          marker = 'render_view("capibara_beta_three_quarter.png", (5.7, -8.0, 3.48), (0, -0.05, 2.22), 61, "big_smile")'
+          s = s.replace(marker, marker + '\nprint("CAPIBARA_V3_FAST_PREVIEW_OK")\nraise SystemExit(0)')
+          p.write_text(s, encoding='utf-8')
+          PY
+          python -m py_compile CapibaraPreview/tools/create_capybara.py
+
+      - name: Install Blender runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libegl1 libgl1 libgl1-mesa-dri libglx-mesa0 \
+            libx11-6 libxext6 libxi6 libxrender1 libxfixes3 \
+            libxxf86vm1 libxkbcommon0 xvfb
+          curl -fL --retry 5 --retry-delay 3 \
+            "https://cdn.builder.blender.org/download/daily/archive/blender-4.5.11-stable%2Bv45.4db51e9d1e1e-linux.x86_64-release.tar.xz" \
+            -o blender-portable.tar.xz
+          mkdir -p blender-portable
+          tar -xf blender-portable.tar.xz -C blender-portable --strip-components=1
+          chmod +x blender-portable/blender
+
+      - name: Render three real Blender views
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          xvfb-run -a blender-portable/blender -b \
+            --python CapibaraPreview/tools/create_capybara.py \
+            -- "$PWD/preview-output" "$PWD/CapibaraPreview"
+          test -s preview-output/capibara_beta_1_0.blend
+          test -s preview-output/capibara_beta_front.png
+          test -s preview-output/capibara_beta_profile.png
+          test -s preview-output/capibara_beta_three_quarter.png
+
+      - name: Upload art preview
+        uses: actions/upload-artifact@v4
+        with:
+          name: Capibara-V3-Preview-Real-Blender
+          path: preview-output/
+          if-no-files-found: error
+          retention-days: 14
