@@ -20,9 +20,20 @@ jobs:
         with:
           ref: agent/capibara-alpha-godot
 
-      - name: Validate V4 source
+      - name: Prepare and validate V4 source
         run: |
-          python -m py_compile capibara-alpha-source/create_capybara_v4_clean_surface.py
+          cp capibara-alpha-source/create_capybara_v4_clean_surface.py /tmp/create_capybara_v4.py
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('/tmp/create_capybara_v4.py')
+          s = p.read_text(encoding='utf-8')
+          old = 'world = scene.world\nworld.use_nodes = True'
+          new = 'world = scene.world\nif world is None:\n    world = bpy.data.worlds.new("Capibara World")\n    scene.world = world\nworld.use_nodes = True'
+          if old not in s:
+              raise RuntimeError('World patch target not found')
+          p.write_text(s.replace(old, new, 1), encoding='utf-8')
+          PY
+          python -m py_compile /tmp/create_capybara_v4.py
           mkdir -p preview-output
 
       - name: Install Blender Portable
@@ -38,7 +49,7 @@ jobs:
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"
         run: |
-          xvfb-run -a blender-portable/blender -b --python capibara-alpha-source/create_capybara_v4_clean_surface.py -- "$PWD/preview-output"
+          xvfb-run -a blender-portable/blender -b --python /tmp/create_capybara_v4.py -- "$PWD/preview-output"
           test -s preview-output/capibara_v4_clean_surface.blend
           test -s preview-output/capibara_v4_front.png
           test -s preview-output/capibara_v4_profile.png
