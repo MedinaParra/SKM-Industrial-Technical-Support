@@ -1,0 +1,4 @@
+encoding=base64
+filename=capibara_v3_contact_sheet.jpg
+chars=29208
+parts=3
