@@ -20,19 +20,23 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: agent/capibara-alpha-godot
-      - name: Download temporary Drive GLB
+      - name: Inspect temporary Drive response
         run: |
           set -euxo pipefail
           FILE_ID="1D_URNQsJ0Hdk56qt1Yjp1lQyvFy5YS8P"
           curl -fL --retry 3 --retry-delay 2 \
+            -D drive-headers.txt \
             "https://drive.usercontent.google.com/download?id=${FILE_ID}&export=download&confirm=t" \
             -o capibara-user.glb
           stat -c '%n %s bytes' capibara-user.glb
-          test "$(stat -c%s capibara-user.glb)" -gt 5000000
+          file capibara-user.glb
+          sed -n '1,80p' drive-headers.txt
           python - <<'PY'
           from pathlib import Path
-          p = Path('capibara-user.glb')
-          data = p.read_bytes()
-          assert data[:4] == b'glTF', data[:100]
+          data = Path('capibara-user.glb').read_bytes()
+          print('FIRST_BYTES_HEX', data[:64].hex())
+          print('FIRST_BYTES_TEXT', repr(data[:300]))
+          assert data[:4] == b'glTF', 'Drive response is not the GLB'
+          assert len(data) > 5_000_000, len(data)
           print('DRIVE_GLB_OK', len(data))
           PY
