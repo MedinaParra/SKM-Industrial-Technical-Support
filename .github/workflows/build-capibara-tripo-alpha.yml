@@ -1,0 +1,190 @@
+name: Build Capibara Tripo Facial Alpha
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/capibara-alpha-godot
+    paths:
+      - "capibara-alpha-source/tripo_optimize.py"
+      - "capibara-alpha-source/apply_tripo_project.py"
+      - ".github/workflows/build-capibara-tripo-alpha.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "capibara-alpha-source/tripo_optimize.py"
+      - "capibara-alpha-source/apply_tripo_project.py"
+      - ".github/workflows/build-capibara-tripo-alpha.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+
+    steps:
+      - name: Checkout capybara branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/capibara-alpha-godot
+
+      - name: Restore Godot project shell
+        run: |
+          cat capibara-alpha-source/part_*.b64 | base64 --decode > CapibaraAlpha-source.tar.gz
+          tar -xzf CapibaraAlpha-source.tar.gz
+          test -f CapibaraAlpha/project.godot
+          rm -rf CapibaraAlpha/assets CapibaraAlpha/.godot CapibaraAlpha/output
+          mkdir -p CapibaraAlpha/assets CapibaraAlpha/output build-output
+          python capibara-alpha-source/apply_tripo_project.py CapibaraAlpha
+          python -m py_compile capibara-alpha-source/tripo_optimize.py capibara-alpha-source/apply_tripo_project.py
+
+      - name: Download user Tripo GLB
+        run: |
+          URL="https://tripo-data.rg1.data.tripo3d.com/tripo-studio/20260804/b83cf9ce-7a63-4a9c-8b78-23bf148a34f0/tripo_pbr_model_b83cf9ce-7a63-4a9c-8b78-23bf148a34f0_meshopt.glb"
+          curl -fL --retry 6 --retry-delay 4 \
+            -A "Mozilla/5.0" \
+            -e "https://studio.tripo3d.ai/" \
+            "$URL" -o capibara-user.glb
+          test "$(stat -c%s capibara-user.glb)" -gt 5000000
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('capibara-user.glb')
+          data = p.read_bytes()
+          if data[:4] != b'glTF':
+              raise SystemExit('Downloaded file is not a GLB')
+          print('USER_GLB_OK', len(data))
+          PY
+          sha256sum capibara-user.glb | tee build-output/capibara-user.glb.sha256
+
+      - name: Install Blender runtime libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libegl1 libgl1 libgl1-mesa-dri libglx-mesa0 \
+            libx11-6 libxext6 libxi6 libxrender1 libxfixes3 \
+            libxxf86vm1 libxkbcommon0 xvfb
+
+      - name: Download Blender Portable 4.5 LTS
+        run: |
+          curl -fL --retry 5 --retry-delay 3 \
+            "https://cdn.builder.blender.org/download/daily/archive/blender-4.5.11-stable%2Bv45.4db51e9d1e1e-linux.x86_64-release.tar.xz" \
+            -o blender-portable.tar.xz
+          mkdir -p blender-portable
+          tar -xf blender-portable.tar.xz -C blender-portable --strip-components=1
+          chmod +x blender-portable/blender
+          blender-portable/blender --version
+
+      - name: Optimize GLB and render real Blender views
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          xvfb-run -a blender-portable/blender -b \
+            --python capibara-alpha-source/tripo_optimize.py \
+            -- "$PWD/capibara-user.glb" \
+               "$PWD/CapibaraAlpha/assets/capibara_tripo_mobile.glb" \
+               "$PWD/build-output"
+          test -s CapibaraAlpha/assets/capibara_tripo_mobile.glb
+          test -s build-output/capibara_tripo_mobile.blend
+          test -s build-output/capibara_tripo_front.png
+          test -s build-output/capibara_tripo_three_quarter.png
+          test -s build-output/capibara_tripo_profile.png
+          test -s build-output/capibara_tripo_rear.png
+          test -s build-output/model_report.txt
+          cp CapibaraAlpha/assets/capibara_tripo_mobile.glb build-output/
+
+      - name: Configure Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Configure Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.1"
+
+      - name: Download Godot 4.7.1 and Android templates
+        run: |
+          curl -fL --retry 5 --retry-delay 3 \
+            "https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip" \
+            -o godot.zip
+          unzip -q godot.zip -d godot-bin
+          GODOT_BIN="$(find godot-bin -maxdepth 1 -type f -name 'Godot*' | head -n 1)"
+          chmod +x "$GODOT_BIN"
+          echo "GODOT=$PWD/$GODOT_BIN" >> "$GITHUB_ENV"
+          "$GODOT_BIN" --version
+
+          curl -fL --retry 5 --retry-delay 3 \
+            "https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_export_templates.tpz" \
+            -o templates.tpz
+          mkdir -p templates-unpack
+          unzip -q templates.tpz -d templates-unpack
+          TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/4.7.1.stable"
+          mkdir -p "$TEMPLATE_DIR"
+          if [ -d templates-unpack/templates ]; then
+            cp -a templates-unpack/templates/. "$TEMPLATE_DIR/"
+          else
+            cp -a templates-unpack/. "$TEMPLATE_DIR/"
+          fi
+          test -s "$TEMPLATE_DIR/android_debug.apk"
+
+      - name: Create Android debug keystore
+        run: |
+          mkdir -p "$HOME/.android"
+          if [ ! -f "$HOME/.android/debug.keystore" ]; then
+            keytool -genkeypair -v \
+              -keystore "$HOME/.android/debug.keystore" \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -dname "CN=Capibara Expresiones,O=MedinaParra,C=CL" \
+              -keyalg RSA -keysize 2048 -validity 10000
+          fi
+
+      - name: Import and validate Godot project
+        run: |
+          set -o pipefail
+          "$GODOT" --headless --editor --path CapibaraAlpha --quit-after 45 2>&1 | tee build-output/godot-import.log
+          test -d CapibaraAlpha/.godot
+          if grep -E "SCRIPT ERROR|Parse Error|Failed to load script|Cannot infer" build-output/godot-import.log; then
+            echo "Godot validation failed"
+            exit 1
+          fi
+
+      - name: Export Android APK for ARM32 and ARM64
+        run: |
+          APK_PATH="$PWD/CapibaraAlpha/output/Capibara-Tripo-Expresiones-Alpha.apk"
+          "$GODOT" --headless --path CapibaraAlpha \
+            --export-debug "Android" "$APK_PATH" 2>&1 | tee build-output/godot-export.log
+          test -s "$APK_PATH"
+          unzip -t "$APK_PATH"
+          unzip -l "$APK_PATH" | grep "lib/armeabi-v7a/"
+          unzip -l "$APK_PATH" | grep "lib/arm64-v8a/"
+          "$ANDROID_HOME/build-tools/35.0.1/apksigner" verify \
+            --verbose --print-certs "$APK_PATH" \
+            > build-output/Capibara-Tripo-Expresiones-Alpha-signature.txt
+          cp "$APK_PATH" build-output/
+          sha256sum "$APK_PATH" > build-output/Capibara-Tripo-Expresiones-Alpha.apk.sha256
+
+      - name: Package source
+        run: |
+          (
+            cd CapibaraAlpha
+            zip -qr ../build-output/Capibara-Tripo-Expresiones-Alpha-source.zip . \
+              -x "output/*" ".godot/*"
+          )
+          find build-output -maxdepth 1 -type f -printf "%f  %s bytes\n" | sort
+
+      - name: Upload Tripo facial alpha
+        uses: actions/upload-artifact@v4
+        with:
+          name: Capibara-Tripo-Expresiones-Alpha
+          path: build-output/
+          if-no-files-found: error
+          retention-days: 30

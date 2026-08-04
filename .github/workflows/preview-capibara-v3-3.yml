@@ -1,0 +1,87 @@
+name: Preview Capibara V3.3
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/capibara-alpha-godot
+    paths:
+      - ".github/workflows/preview-capibara-v3-3.yml"
+      - "capibara-alpha-source/create_capybara_v3.py"
+      - "capibara-alpha-source/apply_v3_1_cute_patch.py"
+      - "capibara-alpha-source/apply_v3_2_face_simplification.py"
+      - "capibara-alpha-source/apply_v3_3_reference_proportions.py"
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/capibara-alpha-godot
+
+      - name: Prepare V3.3 generator
+        run: |
+          mkdir -p CapibaraPreview/tools CapibaraPreview/assets CapibaraPreview/data preview-output
+          cp capibara-alpha-source/create_capybara_v3.py CapibaraPreview/tools/create_capybara.py
+          python - <<'PY'
+          from pathlib import Path
+          src = Path('capibara-alpha-source/apply_v3_1_cute_patch.py').read_text(encoding='utf-8')
+          src = src.replace("replace_exact('''        add_uv(f\"Nostril_", "replace_exact('''    add_uv(f\"Nostril_")
+          src = src.replace("''', '''        add_uv(f\"Nostril_", "''', '''    add_uv(f\"Nostril_")
+          Path('/tmp/apply_v3_1_cute_patch.py').write_text(src, encoding='utf-8')
+          PY
+          python /tmp/apply_v3_1_cute_patch.py CapibaraPreview/tools/create_capybara.py
+          python capibara-alpha-source/apply_v3_2_face_simplification.py CapibaraPreview/tools/create_capybara.py
+          python capibara-alpha-source/apply_v3_3_reference_proportions.py CapibaraPreview/tools/create_capybara.py
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('CapibaraPreview/tools/create_capybara.py')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace('scene.render.engine = "BLENDER_EEVEE_NEXT"', 'scene.render.engine = "BLENDER_WORKBENCH"\nscene.display.shading.light = "STUDIO"\nscene.display.shading.color_type = "MATERIAL"\nscene.display.shading.show_shadows = True\nscene.display.shading.show_cavity = True\nscene.display.shading.cavity_type = "WORLD"')
+          s = s.replace('res=(1024, 1024)', 'res=(512, 512)')
+          marker = 'render_view("capibara_beta_three_quarter.png", (5.7, -8.0, 3.48), (0, -0.05, 2.22), 61, "big_smile")'
+          if marker not in s:
+              raise RuntimeError('Preview stop marker not found')
+          s = s.replace(marker, marker + '\nprint("CAPIBARA_V3_3_FAST_PREVIEW_OK")\nraise SystemExit(0)', 1)
+          p.write_text(s, encoding='utf-8')
+          PY
+          python -m py_compile CapibaraPreview/tools/create_capybara.py
+
+      - name: Install Blender Portable runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libegl1 libgl1 libgl1-mesa-dri libglx-mesa0 \
+            libx11-6 libxext6 libxi6 libxrender1 libxfixes3 \
+            libxxf86vm1 libxkbcommon0 xvfb
+          curl -fL --retry 5 --retry-delay 3 \
+            "https://cdn.builder.blender.org/download/daily/archive/blender-4.5.11-stable%2Bv45.4db51e9d1e1e-linux.x86_64-release.tar.xz" \
+            -o blender-portable.tar.xz
+          mkdir -p blender-portable
+          tar -xf blender-portable.tar.xz -C blender-portable --strip-components=1
+          chmod +x blender-portable/blender
+
+      - name: Render real Blender views
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          xvfb-run -a blender-portable/blender -b \
+            --python CapibaraPreview/tools/create_capybara.py \
+            -- "$PWD/preview-output" "$PWD/CapibaraPreview"
+          test -s preview-output/capibara_beta_1_0.blend
+          test -s preview-output/capibara_beta_front.png
+          test -s preview-output/capibara_beta_profile.png
+          test -s preview-output/capibara_beta_three_quarter.png
+
+      - name: Upload V3.3 art review
+        uses: actions/upload-artifact@v4
+        with:
+          name: Capibara-V3.3-Preview-Real-Blender
+          path: preview-output/
+          if-no-files-found: error
+          retention-days: 14

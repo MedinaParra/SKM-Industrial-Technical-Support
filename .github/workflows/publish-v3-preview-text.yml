@@ -1,0 +1,63 @@
+name: Publish V3 Preview Contact Sheet
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/capibara-alpha-godot
+    paths:
+      - ".github/workflows/publish-v3-preview-text.yml"
+      - "capibara-alpha-source/v3-previews/**"
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/capibara-alpha-godot
+
+      - name: Build inspectable miniature previews
+        run: |
+          python -m pip install --quiet pillow
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+          import base64, shutil
+
+          root = Path('capibara-alpha-source/v3-previews')
+          inputs = {
+              'front': root / 'capibara_v3_front.png',
+              'profile': root / 'capibara_v3_profile.png',
+              'three_quarter': root / 'capibara_v3_three_quarter.png',
+          }
+          out_dir = Path('capibara-alpha-source/v3-preview-export')
+          if out_dir.exists():
+              shutil.rmtree(out_dir)
+          out_dir.mkdir(parents=True)
+          manifest = []
+          for name, path in inputs.items():
+              img = Image.open(path).convert('RGB')
+              img.thumbnail((144, 144), Image.Resampling.LANCZOS)
+              canvas = Image.new('RGB', (144, 144), (238, 236, 228))
+              canvas.paste(img, ((144 - img.width) // 2, (144 - img.height) // 2))
+              jpg = out_dir / f'capibara_v3_{name}_small.jpg'
+              canvas.save(jpg, quality=42, optimize=True, progressive=False)
+              encoded = base64.b64encode(jpg.read_bytes()).decode('ascii')
+              (out_dir / f'{name}_small.b64').write_text(encoded, encoding='ascii')
+              manifest.append(f'{name}: chars={len(encoded)}')
+          (out_dir / 'manifest.txt').write_text('\n'.join(manifest) + '\n', encoding='utf-8')
+          print('\n'.join(manifest))
+          PY
+
+      - name: Commit miniature previews
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A capibara-alpha-source/v3-preview-export
+          git diff --cached --quiet || git commit -m "art: publish inspectable Capibara V3 real previews"
+          git push origin HEAD:agent/capibara-alpha-godot

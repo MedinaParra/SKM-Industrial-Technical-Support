@@ -1,0 +1,31 @@
+name: Decode Capibara V3 Source
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - agent/capibara-alpha-godot
+    paths:
+      - ".github/workflows/decode-capibara-v3-source.yml"
+      - "capibara-alpha-source/create_capybara_v3.py.gz.b64"
+
+permissions:
+  contents: write
+
+jobs:
+  decode:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/capibara-alpha-godot
+      - name: Decode editable source
+        run: |
+          base64 --decode capibara-alpha-source/create_capybara_v3.py.gz.b64 | gzip -d > capibara-alpha-source/create_capybara_v3.py
+          python -m py_compile capibara-alpha-source/create_capybara_v3.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add capibara-alpha-source/create_capybara_v3.py
+          git diff --cached --quiet || git commit -m "art: expose editable Capibara V3 Blender source"
+          git push origin HEAD:agent/capibara-alpha-godot
