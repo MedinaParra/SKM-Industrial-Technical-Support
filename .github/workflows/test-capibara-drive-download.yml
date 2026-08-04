@@ -1,0 +1,35 @@
+name: Test Capibara Drive Download
+
+on:
+  push:
+    branches: [agent/capibara-alpha-godot]
+    paths: [".github/workflows/test-capibara-drive-download.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/capibara-alpha-godot
+      - name: Download temporary Drive GLB
+        run: |
+          set -euxo pipefail
+          FILE_ID="1D_URNQsJ0Hdk56qt1Yjp1lQyvFy5YS8P"
+          curl -fL --retry 3 --retry-delay 2 \
+            "https://drive.usercontent.google.com/download?id=${FILE_ID}&export=download&confirm=t" \
+            -o capibara-user.glb
+          stat -c '%n %s bytes' capibara-user.glb
+          test "$(stat -c%s capibara-user.glb)" -gt 5000000
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('capibara-user.glb')
+          data = p.read_bytes()
+          assert data[:4] == b'glTF', data[:100]
+          print('DRIVE_GLB_OK', len(data))
+          PY
