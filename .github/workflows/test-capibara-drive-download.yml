@@ -4,6 +4,9 @@ on:
   push:
     branches: [agent/capibara-alpha-godot]
     paths: [".github/workflows/test-capibara-drive-download.yml"]
+  pull_request:
+    branches: [main]
+    paths: [".github/workflows/test-capibara-drive-download.yml"]
   workflow_dispatch:
 
 permissions:
